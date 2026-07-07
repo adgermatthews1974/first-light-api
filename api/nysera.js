@@ -13,7 +13,7 @@
 
 // TEMP: allow any origin so the page connects no matter how Squarespace serves it.
 // Once she's working, flip ALLOW_ANY to false to lock it to your site only.
-const ALLOW_ANY = true;
+const ALLOW_ANY = false;
 const ALLOWED_ORIGINS = [
     "https://www.soulforgedstudio.com",
     "https://soulforgedstudio.com",
