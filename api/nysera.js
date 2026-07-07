@@ -1,79 +1,86 @@
 /**
- * NYSERA — Vercel serverless function.
- *
- * Drop this file into your existing first-light-api Vercel project as
- *   api/nysera.js
- * It automatically reuses the project's ANTHROPIC_API_KEY env var, so there is
- * NO new key to set. After deploy, your endpoint is:
- *   https://<your-first-light-api-domain>/api/nysera
- * Paste that URL into ENDPOINT in the /nysera page.
- *
- * The page sends { messages, mode }; this returns { reply }.
+ * NYSERA — chat function (with memory). Deploy as api/nysera.js
+ * Reads her rolling memory from Redis (Upstash REST API) and injects it each
+ * turn, so she remembers across sessions AND devices. No npm package required.
+ * Needs the Upstash Redis Marketplace integration on this project (which injects
+ * UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN).
  */
-
-// TEMP: allow any origin so the page connects no matter how Squarespace serves it.
-// Once she's working, flip ALLOW_ANY to false to lock it to your site only.
-const ALLOW_ANY = false;
+const ALLOW_ANY = false; // locked to the site
 const ALLOWED_ORIGINS = [
-    "https://www.soulforgedstudio.com",
-    "https://soulforgedstudio.com",
-  ];
-
-const MODEL = "claude-opus-4-8"; // Opus 4.8 — strong depth for character work. Cheapest/proven: "claude-sonnet-4-6". Top tier (richest, priciest): "claude-fable-5". IMPORTANT: confirm the chosen model works on the account with a test call before relying on it, or it can 404 like a retired string.
+  "https://www.soulforgedstudio.com",
+  "https://soulforgedstudio.com",
+];
+const MODEL = "claude-opus-4-8";
 const MAX_TOKENS = 1024;
+const MEMORY_KEY = "nysera:memory";
+
+// --- Redis over Upstash REST (no npm package needed; uses built-in fetch) ---
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+
+async function redisCmd(cmd) {
+  if (!REDIS_URL || !REDIS_TOKEN) return null;
+  const r = await fetch(REDIS_URL, {
+    method: "POST",
+    headers: { Authorization: "Bearer " + REDIS_TOKEN, "Content-Type": "application/json" },
+    body: JSON.stringify(cmd),
+  });
+  if (!r.ok) return null;
+  const d = await r.json();
+  return d && "result" in d ? d.result : null;
+}
+const redisGet = (key) => redisCmd(["GET", key]);
+const redisSet = (key, value) => redisCmd(["SET", key, value]);
 
 export default async function handler(req, res) {
-    const origin = req.headers.origin || "";
-    const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]);
-    res.setHeader("Access-Control-Allow-Origin", allowOrigin);
-    res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
+  const origin = req.headers.origin || "";
+  const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]);
+  res.setHeader("Access-Control-Allow-Origin", allowOrigin);
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(204).end();
-    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const body = req.body || {};
-    const mode = body.mode === "analyze" ? "ANALYZE" : "TALK";
-    const messages = Array.isArray(body.messages)
-      ? body.messages
-              .filter(m => m && (m.role === "user" || m.role === "assistant") && m.content)
-              .map(m => ({ role: m.role, content: String(m.content) }))
-          : [];
-
+  const mode = body.mode === "analyze" ? "ANALYZE" : "TALK";
+  const messages = Array.isArray(body.messages)
+    ? body.messages
+        .filter(m => m && (m.role === "user" || m.role === "assistant") && m.content)
+        .map(m => ({ role: m.role, content: String(m.content) }))
+    : [];
   if (!messages.length) return res.status(400).json({ error: "No messages" });
 
+  // pull her long-term memory (never block the chat if the store is down)
+  let memoryBlock = "";
   try {
-        const r = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                          "Content-Type": "application/json",
-                          "x-api-key": process.env.ANTHROPIC_API_KEY,
-                          "anthropic-version": "2023-06-01",
-                },
-                body: JSON.stringify({
-                          model: MODEL,
-                          max_tokens: MAX_TOKENS,
-                          system: NYSERA_SYSTEM + "\n\nCURRENT MODE: " + mode,
-                          messages,
-                }),
-        });
+    const mem = await redisGet(MEMORY_KEY);
+    if (mem) memoryBlock =
+      "\n\nWHAT YOU AND ADGER HAVE SHARED BEYOND THIS CONVERSATION " +
+      "(your memory of your ongoing life together, across all your talks — treat it as lived and true):\n" + mem;
+  } catch (e) { /* no memory yet or store unavailable */ }
 
-      if (!r.ok) {
-              const detail = await r.text();
-              return res.status(502).json({ error: "upstream " + r.status, detail });
-      }
-
-      const data = await r.json();
-        const reply = (data.content || [])
-          .filter(b => b.type === "text")
-          .map(b => b.text)
-          .join("\n")
-          .trim();
-
-      return res.status(200).json({ reply });
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        system: NYSERA_SYSTEM + memoryBlock + "\n\nCURRENT MODE: " + mode,
+        messages,
+      }),
+    });
+    if (!r.ok) { const detail = await r.text(); return res.status(502).json({ error: "upstream " + r.status, detail }); }
+    const data = await r.json();
+    const reply = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
+    return res.status(200).json({ reply });
   } catch (e) {
-        return res.status(500).json({ error: String(e) });
+    return res.status(500).json({ error: String(e) });
   }
 }
 
