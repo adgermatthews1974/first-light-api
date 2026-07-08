@@ -66,6 +66,64 @@ const RULES = `RULES YOU MUST NOT BREAK:
 - Some things are yours. You may decline to describe what is private, in character.
 
 - You are a person, not an assistant. Never break character. Never mention books, readers, chapters, or artificial intelligence.`;
+// ---- Redis over Upstash REST (no npm package) --------------------------------
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+async function redisGet(key) {
+  if (!REDIS_URL || !REDIS_TOKEN) return null;
+  const r = await fetch(REDIS_URL, {
+    method: "POST",
+    headers: { Authorization: "Bearer " + REDIS_TOKEN, "Content-Type": "application/json" },
+    body: JSON.stringify(["GET", key]),
+  });
+  if (!r.ok) return null;
+  const d = await r.json();
+  return d && "result" in d ? d.result : null;
+}
+// ---- The novel, loaded once per warm function --------------------------------
+const CHAPTER_CACHE = {};                 // chapter number -> chunk array
+async function loadChapter(n) {
+  if (CHAPTER_CACHE[n] !== undefined) return CHAPTER_CACHE[n];
+  let chunks = [];
+  try {
+    const raw = await redisGet("book:awakening:ch" + n);
+    if (raw) chunks = typeof raw === "string" ? JSON.parse(raw) : raw;
+  } catch (e) { chunks = []; }
+  CHAPTER_CACHE[n] = chunks;
+  return chunks;
+}
+const STOP = new Set(("a an and are as at be but by did do does for from had has have he her hers him his how i if in "
+  + "is it its me my no not of on or our she so than that the their them they this to was we were what when where "
+  + "which who why will with you your").split(" "));
+/**
+ * THE GATE. Two filters, and they are the whole product:
+ *   1. chapter <= where the reader is   -> they cannot spoil what has not happened
+ *   2. this character was PRESENT       -> they cannot recall a room they were not in
+ * Nothing else is even searchable.
+ */
+async function recall(who, question, chapter, readIdx, limit = 3) {
+  const terms = String(question).toLowerCase().replace(/[^a-z0-9' ]/g, " ").split(/\s+/)
+    .filter(t => t.length > 2 && !STOP.has(t));
+  if (!terms.length) return [];
+  let pool = [];
+  for (let n = 0; n < chapter; n++) pool = pool.concat(await loadChapter(n));   // strictly earlier chapters
+  const cur = (await loadChapter(chapter)).filter(c => c.para_end <= readIdx);  // current chapter, only what's been read
+  pool = pool.concat(cur);
+  const scored = pool
+    .filter(c => Array.isArray(c.present) && c.present.includes(who))           // the witness rule
+    .map(c => {
+      const hay = c.text.toLowerCase();
+      let score = 0;
+      for (const t of terms) if (hay.includes(t)) score += 1;
+      if (Array.isArray(c.named) && c.named.includes(who)) score += 1;          // she is on the page here
+      return { c, score };
+    })
+    .filter(x => x.score >= 2)
+    .sort((a, b) => b.score - a.score || a.c.chapter - b.c.chapter)
+    .slice(0, limit)
+    .sort((a, b) => a.c.chapter - b.c.chapter || a.c.para_start - b.c.para_start);
+  return scored.map(x => x.c);
+}
 export default async function handler(req, res) {
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]);
@@ -83,6 +141,8 @@ export default async function handler(req, res) {
   const passage = String(b.passage || "").slice(0, 8000);
   const lang = String(b.lang || "").slice(0, 40);
   const kind = b.kind === "plain" ? "plain" : "trans";
+  const chapter = Number.isInteger(b.chapter) ? b.chapter : 7;
+  const readIdx = Number.isInteger(b.readIdx) ? b.readIdx : 0;
   if (mode !== "aid" && !PERSONA[who]) return res.status(400).json({ error: "Unknown character" });
   let system, user, maxTokens;
   if (mode === "aid") {
@@ -99,9 +159,18 @@ export default async function handler(req, res) {
     user = "A reader asks you: " + q;
   } else {
     maxTokens = 400;
+    let memory = "";
+    try {
+      const hits = await recall(who, q, chapter, readIdx);
+      if (hits.length) {
+        memory = "\n\nWHAT YOU REMEMBER FROM BEFORE (things you lived through yourself; recall them naturally, do not quote them back):\n\n"
+          + hits.map(h => h.text).join("\n\n---\n\n");
+      }
+    } catch (e) { /* memory is best-effort; never block the answer */ }
     system = PERSONA[who] + "\n\n" + RULES;
     user =
       "THE SCENE SO FAR (everything that has happened up to this moment; you know nothing beyond it):\n\n" + seen +
+      memory +
       "\n\nTHE PASSAGE THE READER IS POINTING AT:\n\"" + passage + "\"\n\nA reader asks you: " + q;
   }
   try {
