@@ -19,7 +19,7 @@ const ALLOWED_ORIGINS = [
 ];
 const MODEL = "claude-sonnet-4-6";
 // --- spend guards -----------------------------------------------------------
-const IP_HOURLY_LIMIT = 20;    // invisible to a human, fatal to a script
+const IP_HOURLY_LIMIT = 60;    // invisible to a human, fatal to a script
 const DAILY_CEILING   = 800;   // whole page stops answering; bounded worst case
 const CORE = {
   Selene: [
