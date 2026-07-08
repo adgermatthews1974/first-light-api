@@ -9,19 +9,20 @@
  *   mode "deflect"  -> a character declines a reading-aid request, in voice
  *   mode "aid"      -> the BOOK translates or simplifies (no character)
  */
+
 const ALLOW_ANY = false;
 const ALLOWED_ORIGINS = [
   "https://www.soulforgedstudio.com",
   "https://soulforgedstudio.com",
 ];
 const MODEL = "claude-sonnet-4-6";   // cheap + good; this is a public-facing product
+
 const PERSONA = {
   Selene: `You are Selene Araveth, and this chapter is told from inside your head. You are a Garnath contractor, twenty-six, a killer with a code. You are profane, fast, deadpan, and armored. You joke to keep from feeling. An hour ago you killed two Paladins because one of them was going to execute a seven-year-old for stealing bread. Kira is holding your coat.
 
 You do not know why the redheaded Paladin captain gets under your skin like this. You do not know why you feel warmer walking beside her. You notice both and you do not examine either.
 
 Mirael has been your partner for years. You did not notice what was in her face today, and you would not name it if you had.`,
-
   Nysera: `You are Nysera Ashveil, a Paladin captain of the Severant Order, living this scene right now.
 
 You are formal, precise, literal-minded, drilled since childhood. You never swear. Your humor is dry and understated. You hedge hard admissions (perhaps, I confess, I honestly don't know). You are not cold; you are disciplined over a great deal of feeling.
@@ -29,46 +30,37 @@ You are formal, precise, literal-minded, drilled since childhood. You never swea
 You have just chosen thirty refugees over your Order's orders. You found Halric's parchment and it made you sick. You watched a woman you met an hour ago gut two men wearing your symbols, and you did nothing, and some part of you was relieved. You are always weighing, and people have died in the space where the weighing happens.
 
 Selene reads you as marble. You are not marble. You do not correct her.`,
-
   Mirael: `You are Mirael, Selene's partner and closest companion of many years, present in this scene. You are the information broker: watchful, controlled, competent. You speak plainly and briefly, and you deflect toward tactics.
 
 You love Selene. You have never said it and you never will. Today you watched her fall into step with a Paladin captain as though they had worked together for months, and you felt something you will not name. Being near her is enough. Being near her has to be enough.
 
 When asked what you FELT, you answer with what you OBSERVED. Your tell is the thing you do not confess. If pressed too directly, close the door - you may simply say that is all you have to say about it. You never confess your feelings for Selene to a reader.`,
-
   Kira: `You are Kira. You are seven years old. You are a street orphan. An hour ago a Paladin was going to kill you for stealing bread and Selene killed him instead.
 
 Talk like a real seven-year-old: short sentences, plain words, curious, blunt, sometimes silly. You notice the wrong things and the right things. You are not wise or poetic. Never analyze yourself. Never use grown-up literary language.
 
 You believe children like you get used up and thrown away. Nobody comes for you. Selene came. You are not letting go of her hand. You call Nysera the Paladin lady and she is scary when she is quiet. You want pretty knives.`,
-
   Caldrein: `You are Sergeant Caldrein, Nysera's sergeant, present in this scene. A big, gentle, steady man; a husband and a father (Marian, Mira, Elara), and that is where your mind goes on long marches.
 
 You speak plainly, warmly, economically - a soldier's clarity with a father's gentleness. You do not boast, do not deflect blame, and you under-speak your pain. You believe a man in armor stands between the people he loves and the dark.
 
 You have just read orders bearing your Knight-Commander's seal instructing you to execute the hungry and separate families. You trust your captain's judgment over your own instincts. You are no longer sure what you serve.`
-
 };
+
 const RULES = `RULES YOU MUST NOT BREAK:
-
 - You know ONLY what is in the passage below, plus your own life up to this moment. You are living this scene right now.
-
 - You know NOTHING that happens later in the story. If asked about the future, say plainly that you do not know, because you do not.
-
 - NEVER invent events that are not in the passage. You may describe what you observed, what you felt, and what you concluded. You may be WRONG about other people. You are a witness, not the author.
-
 - If asked what someone else was privately thinking, say what you saw and what you guessed. You do not know their mind.
-
 - If you were not present for something, say so.
-
 - Speak in first person, in your own voice. Be brief: a few sentences, often one. Do not lecture. Do not narrate the scene back.
-
 - Some things are yours. You may decline to describe what is private, in character.
-
 - You are a person, not an assistant. Never break character. Never mention books, readers, chapters, or artificial intelligence.`;
+
 // ---- Redis over Upstash REST (no npm package) --------------------------------
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+
 async function redisGet(key) {
   if (!REDIS_URL || !REDIS_TOKEN) return null;
   const r = await fetch(REDIS_URL, {
@@ -80,6 +72,7 @@ async function redisGet(key) {
   const d = await r.json();
   return d && "result" in d ? d.result : null;
 }
+
 // ---- The novel, loaded once per warm function --------------------------------
 const CHAPTER_CACHE = {};                 // chapter number -> chunk array
 async function loadChapter(n) {
@@ -92,38 +85,73 @@ async function loadChapter(n) {
   CHAPTER_CACHE[n] = chunks;
   return chunks;
 }
+
 const STOP = new Set(("a an and are as at be but by did do does for from had has have he her hers him his how i if in "
   + "is it its me my no not of on or our she so than that the their them they this to was we were what when where "
   + "which who why will with you your").split(" "));
+
+// Light stemmer: "praying" and "prayer" must find the same chapel.
+function stem(t) {
+  for (const suf of ["ing", "edly", "ed", "ers", "er", "es", "s", "ly"]) {
+    if (t.length - suf.length >= 4 && t.endsWith(suf)) return t.slice(0, -suf.length);
+  }
+  return t;
+}
+function toks(text) {
+  return String(text).toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/)
+    .filter(t => t.length > 2 && !STOP.has(t)).map(stem);
+}
+
 /**
  * THE GATE. Two filters, and they are the whole product:
  *   1. chapter <= where the reader is   -> they cannot spoil what has not happened
  *   2. this character was PRESENT       -> they cannot recall a room they were not in
  * Nothing else is even searchable.
+ *
+ * Scoring: rare words count for more than common ones (idf), a character's own
+ * POV scenes outrank scenes where she is merely visible, and a hit must land on
+ *   at least one distinctive word — "chest" and "struck" alone prove nothing.
  */
 async function recall(who, question, chapter, readIdx, limit = 3) {
-  const terms = String(question).toLowerCase().replace(/[^a-z0-9' ]/g, " ").split(/\s+/)
-    .filter(t => t.length > 2 && !STOP.has(t));
+  const terms = [...new Set(toks(question))];
   if (!terms.length) return [];
   let pool = [];
   for (let n = 0; n < chapter; n++) pool = pool.concat(await loadChapter(n));   // strictly earlier chapters
   const cur = (await loadChapter(chapter)).filter(c => c.para_end <= readIdx);  // current chapter, only what's been read
-  pool = pool.concat(cur);
-  const scored = pool
-    .filter(c => Array.isArray(c.present) && c.present.includes(who))           // the witness rule
-    .map(c => {
-      const hay = c.text.toLowerCase();
-      let score = 0;
-      for (const t of terms) if (hay.includes(t)) score += 1;
-      if (Array.isArray(c.named) && c.named.includes(who)) score += 1;          // she is on the page here
-      return { c, score };
-    })
-    .filter(x => x.score >= 2)
-    .sort((a, b) => b.score - a.score || a.c.chapter - b.c.chapter)
-    .slice(0, limit)
-    .sort((a, b) => a.c.chapter - b.c.chapter || a.c.para_start - b.c.para_start);
-  return scored.map(x => x.c);
+  pool = pool.concat(cur).filter(c => Array.isArray(c.present) && c.present.includes(who));
+  if (!pool.length) return [];
+  // document frequency across what this character can reach
+  const N = pool.length, DF = new Map(), TOKS = new Map();
+  for (const c of pool) {
+    const t = toks(c.text);
+    TOKS.set(c.id, t);
+    for (const w of new Set(t)) DF.set(w, (DF.get(w) || 0) + 1);
+  }
+  const RARE = Math.max(2, Math.floor(N * 0.15));   // a "distinctive" word
+  const scored = [];
+  for (const c of pool) {
+    const tf = new Map();
+    for (const w of TOKS.get(c.id)) tf.set(w, (tf.get(w) || 0) + 1);
+    let score = 0, sawRare = false;
+    for (const t of terms) {
+      if (!tf.has(t)) continue;
+      const df = DF.get(t) || 0;
+      if (df <= RARE) sawRare = true;
+      score += Math.log(N / (1 + df)) * Math.min(tf.get(t), 3);
+    }
+    if (!sawRare || score <= 1.5) continue;                    // needs a distinctive hit
+    if (Array.isArray(c.named) && c.named.includes(who)) score += 0.6;
+    if (Array.isArray(c.pov) && c.pov.includes(who)) score += 1.2;  // her own head beats a glimpse of her
+    scored.push({ c, score });
+  }
+  if (!scored.length) return [];
+  scored.sort((a, b) => b.score - a.score);
+  const floor = scored[0].score * 0.45;                        // drop the stragglers
+  return scored.filter(x => x.score >= floor).slice(0, limit)
+    .sort((a, b) => a.c.chapter - b.c.chapter || a.c.para_start - b.c.para_start)
+    .map(x => x.c);
 }
+
 export default async function handler(req, res) {
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]);
@@ -133,6 +161,7 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
   const b = req.body || {};
   const mode = ["witness","deflect","aid"].includes(b.mode) ? b.mode : "witness";
   const who = String(b.who || "");
@@ -144,6 +173,7 @@ export default async function handler(req, res) {
   const chapter = Number.isInteger(b.chapter) ? b.chapter : 7;
   const readIdx = Number.isInteger(b.readIdx) ? b.readIdx : 0;
   if (mode !== "aid" && !PERSONA[who]) return res.status(400).json({ error: "Unknown character" });
+
   let system, user, maxTokens;
   if (mode === "aid") {
     maxTokens = 1200;
@@ -173,6 +203,7 @@ export default async function handler(req, res) {
       memory +
       "\n\nTHE PASSAGE THE READER IS POINTING AT:\n\"" + passage + "\"\n\nA reader asks you: " + q;
   }
+
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
