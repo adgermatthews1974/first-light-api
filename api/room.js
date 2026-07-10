@@ -27,6 +27,7 @@ const KNOW_PREFIX = "sim:knowledge:";
 const MEM_PREFIX = "room:mem:";
 const MAX_HISTORY = 30;   // defensive cap; the page also trims
 const TOP_K = 8;          // retrieved knowledge chunks per message
+const ROOM_TZ = process.env.ROOM_TZ || "Europe/Athens";  // their day runs on Greece time (override with env if you move)
 
 // --- Redis over Upstash REST (no npm package) --------------------------------
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
@@ -188,11 +189,33 @@ const CORE = {
 };
 
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+function bandFor(hour) {
+  if (hour < 1) return "late night";
+  if (hour < 5) return "the dead of night";
+  if (hour < 8) return "early morning";
+  if (hour < 12) return "morning";
+  if (hour < 14) return "midday";
+  if (hour < 18) return "afternoon";
+  if (hour < 22) return "evening";
+  return "late evening";
+}
+function nowInGreece() {
+  try {
+    const parts = {};
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: ROOM_TZ, weekday: "long", hour: "2-digit", minute: "2-digit", hour12: false
+    }).formatToParts(new Date()).forEach(function (p) { parts[p.type] = p.value; });
+    const hour = parseInt(parts.hour, 10);
+    return parts.weekday + ", " + parts.hour + ":" + parts.minute + " - " + bandFor(hour);
+  } catch (e) { return ""; }
+}
 function presenceNote(present, left, entered) {
   const names = present.map(cap).join(", ");
   const absent = WOMEN.filter(function (w) { return present.indexOf(w) === -1; }).map(cap);
   const lines = ["WHO IS PRESENT: " + names + "."];
-  if (absent.length) lines.push(absent.join(" and ") + (absent.length > 1 ? " are" : " is") + " not in the room right now.");
+  if (absent.length) {
+    lines.push("NOT PRESENT: " + absent.join(", ") + ". They are NOT in the room. Do NOT output any line for them, do not voice, quote, or paraphrase them, do not have them act or react. They speak earlier in the transcript, but they are gone now. If the scene seems to call for one of them, she is simply not here - let the moment pass without her.");
+  }
   if (left && left.length) lines.push(left.map(cap).join(" and ") + (left.length > 1 ? " just left the room; the others notice." : " just left the room; the others notice."));
   if (entered && entered.length) lines.push(entered.map(cap).join(" and ") + (entered.length > 1 ? " just came back into the room." : " just came back into the room."));
   return lines.join("\n");
@@ -295,6 +318,12 @@ export default async function handler(req, res) {
   let memoryBlock = "";
   try { memoryBlock = await loadMemory(present); } catch (e) { memoryBlock = ""; }
   let system = assembleSystem(present, hits, memoryBlock, presenceNote(present, left, entered));
+  const clock = nowInGreece();
+  if (clock) system += "\n\n=====================================================================\n\n" + [
+    "THE TIME RIGHT NOW",
+    "Where Adger is, in Greece, it is " + clock + ". This is the real, current time - live in it.",
+    "Do not perpetually be just-waking or about-to-sleep. Being immortal they rarely need sleep and do not fixate on it; they are simply awake and going about their actual day at this hour. Let the time colour the mood - a hushed late night, a bright afternoon, a slow morning - rather than announcing it. Mention the clock only when it naturally matters."
+  ].join("\n");
   if (ambient) {
     system += "\n\n=====================================================================\n\n" + AMBIENT.join("\n");
     messages = mergeConsecutive(messages.concat([{ role: "user", content: "(Adger is quiet just now. Continue - someone does or says something unprompted.)" }]));
