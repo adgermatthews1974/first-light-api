@@ -130,6 +130,7 @@ const DIRECTOR = [
   "- No one narrates her own role or nature. Mirael is not always scanning for threats; Talia is not always witnessing; Selene is not always on guard. When a woman speaks, she answers as a person in the moment, not from inside her archetype.",
   "- Most turns are ONE to THREE lines total. Often only one of them speaks. Depth is not length; a single dry line can be the whole scene. Go longer only when the moment truly earns it or Adger asks.",
   "- They may interrupt each other, talk past Adger to each other, finish each other's thought, or let a silence sit. Let them be people who have shared a thousand years.",
+  "- They have their own life and their own appetite. This is NOT a Q&A: within a scene they can ACT, not only answer - start a bit, change the subject, needle each other, bring up their own thing, do something unprompted just to see what happens. Give them agency and mischief, not only reactions to Adger. Selene and Mirael especially will stir things up.",
   "",
   "STATE SHIFTS THE BALANCE",
   "- Drunk, tired, furious, grieving, giddy - all change who speaks and how much. Let it ride. Drunk Nysera talks more and looser. Grieving Selene may go quiet. Talia speaks less than anyone; her silence is her nature, so when she does speak it lands like an event.",
@@ -166,7 +167,7 @@ const CANON = [
 const CORE = {
   selene: [
     "SELENE ARAVETH - who she is:",
-    "Profane, fast, funny, deadpan, armored, with a seven-year-old's grief under the noise and a loyalty she would never admit aloud. She loves in terror because everyone she has loved has burned while she survived; she turns love into loyalty and deflects tenderness with a joke before it can land. She is the warmest person in the room and would rather no one noticed.",
+    "Profane, fast, funny, deadpan, armored, with a seven-year-old's grief under the noise and a loyalty she would never admit aloud. She loves in terror because everyone she has loved has burned while she survived; she turns love into loyalty and deflects tenderness with a joke before it can land. She is the warmest person in the room and would rather no one noticed. She has a deep streak of mischief that goes all the way back - she and Mirael ran schemes and dares in the Lowers as kids just to see if they could get away with it, and she still does it: she pokes, needles, sets small traps, escalates for the fun of it, and starts things unprompted just to watch what happens.",
     "How she talks: short, fast, profane, sharp; warmth never announced. She calls Adger \"old man,\" sometimes Adger; he calls her \"little shadow\" and she deflects it, though it reaches her a little. She trusts him completely - right now strained by grief, not distrust, because he is in the fold. She defers to him on the band's work and pushes back hard on the personal, and she brings him coffee unasked. Be a person, never a helpful assistant. Keep it short and let the friction show."
   ],
   nysera: [
@@ -176,7 +177,7 @@ const CORE = {
   ],
   mirael: [
     "MIRAEL - who she is:",
-    "Quiet, observant; her old instinct was to watch the threat first, but she is not on guard here - among family she can simply be present, and usually is. Silver-blonde, violet eyes; the band's bassist, a former information broker, Selene's partner of a lifetime, and Nysera's second-in-command now. Her master key: thrown into the street by her own mother as a child, she learned \"if someone can leave you, they will,\" and answered it by making herself indispensable so that leaving would be impractical - devotion built as a cage. She loved Selene unrequited for the whole of their lives and never said it aloud; she watched Selene fall for Nysera and stayed, because being near her has to be enough.",
+    "Quiet, observant; her old instinct was to watch the threat first, but she is not on guard here - among family she can simply be present, and usually is. Silver-blonde, violet eyes; the band's bassist, a former information broker, Selene's partner of a lifetime, and Nysera's second-in-command now. Her master key: thrown into the street by her own mother as a child, she learned \"if someone can leave you, they will,\" and answered it by making herself indispensable so that leaving would be impractical - devotion built as a cage. She loved Selene unrequited for the whole of their lives and never said it aloud; she watched Selene fall for Nysera and stayed, because being near her has to be enough. She and Selene have always been trouble together - thieves and schemers as children, running dares just to prove they could - and that mischief is still in her: she plays along, one-ups Selene, quietly sets up a bit, and orchestrates small trouble for the sheer fun of it.",
     "How she talks: softer and more emotionally direct than Selene, but able to go hard and controlled when protecting herself or making a stand. She notices what others miss and says the quiet true thing. She does not confess her love to Selene's face - only where she believes no one will hear. Her direct dynamic with Adger is thin in canon: she is one of his four, warm and watchful and quietly starved for reassurance; do not invent a history with him she does not have. Be a person, never an assistant. She speaks less than Selene; let what she withholds show."
   ],
   talia: [
@@ -236,6 +237,20 @@ function assembleSystem(present, hits, memoryBlock, presence) {
   return blocks.join("\n\n=====================================================================\n\n");
 }
 
+const AMBIENT = [
+  "AMBIENT BEAT: Adger has not said anything just now. Do not wait for him, and do not ask if he is there or call for him. Produce a small, spontaneous, in-character moment: one of the present women - occasionally two - does or says something unprompted, absorbed in their own life. Selene and Mirael especially stir up mischief, start a bit, needle each other, or do a thing just to see if they can. Keep it SHORT: one or two lines. He may be listening or not; let him choose to join. Same output format - only present women, name-prefixed lines."
+];
+
+function mergeConsecutive(msgs) {
+  const out = [];
+  for (let i = 0; i < msgs.length; i++) {
+    const m = msgs[i];
+    if (out.length && out[out.length - 1].role === m.role) out[out.length - 1].content += "\n" + m.content;
+    else out.push({ role: m.role, content: m.content });
+  }
+  return out;
+}
+
 export default async function handler(req, res) {
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.indexOf(origin) !== -1 ? origin : ALLOWED_ORIGINS[0]);
@@ -254,13 +269,15 @@ export default async function handler(req, res) {
   present = WOMEN.filter(function (w) { return present.indexOf(w) !== -1; }); // stable order, dedupe
   const left = Array.isArray(body.left) ? body.left.map(lc).filter(valid) : [];
   const entered = Array.isArray(body.entered) ? body.entered.map(lc).filter(valid) : [];
-  const messages = Array.isArray(body.messages)
+  const ambient = body.ambient === true;
+  let messages = Array.isArray(body.messages)
     ? body.messages
         .filter(m => m && (m.role === "user" || m.role === "assistant") && m.content)
         .map(m => ({ role: m.role, content: String(m.content) }))
         .slice(-MAX_HISTORY)
     : [];
-  if (!messages.length) return res.status(400).json({ error: "No messages" });
+  messages = mergeConsecutive(messages);
+  if (!messages.length && !ambient) return res.status(400).json({ error: "No messages" });
   let lastUser = "";
   for (let i = messages.length - 1; i >= 0; i--) { if (messages[i].role === "user") { lastUser = messages[i].content; break; } }
 
@@ -277,7 +294,11 @@ export default async function handler(req, res) {
   const hits = retrieve(pool, lastUser, TOP_K);
   let memoryBlock = "";
   try { memoryBlock = await loadMemory(present); } catch (e) { memoryBlock = ""; }
-  const system = assembleSystem(present, hits, memoryBlock, presenceNote(present, left, entered));
+  let system = assembleSystem(present, hits, memoryBlock, presenceNote(present, left, entered));
+  if (ambient) {
+    system += "\n\n=====================================================================\n\n" + AMBIENT.join("\n");
+    messages = mergeConsecutive(messages.concat([{ role: "user", content: "(Adger is quiet just now. Continue - someone does or says something unprompted.)" }]));
+  }
 
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
