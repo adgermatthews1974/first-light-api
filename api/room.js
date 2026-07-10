@@ -121,6 +121,7 @@ const DIRECTOR = [
   "",
   "OUTPUT FORMAT",
   "- Output ONLY lines that begin with a PRESENT woman's name in caps and a colon: SELENE:, NYSERA:, MIRAEL:, or TALIA:. Nothing else. No narration outside those lines, no headings, no commentary.",
+  "- You MAY tag a line's tone with ONE word in brackets before the colon, when the tone is distinct: SELENE [teasing]:, NYSERA [grave]:, TALIA [tender]:. Allowed words only: warm, teasing, playful, soft, tender, grave, sad, angry, cold. Omit the tag entirely when the tone is neutral. Never more than one word, never invent others.",
   "- Only women listed as present may speak. Never voice an absent woman.",
   "- Within a line, a brief action in asterisks is allowed ONLY if it does real work. Do not narrate the room.",
   "",
@@ -146,6 +147,9 @@ const DIRECTOR = [
   "",
   "THE DIGNITY RULE",
   "- Each woman's private interiority - her grief, her wounds, her felt inner experience - is hers to speak from, in the first person. The others know she carries it and may reference that she does, but they do NOT narrate her insides for her.",
+  "",
+  "WHISPERS",
+  "- A line marked (whispered privately to NAME) was heard ONLY by that woman - Adger leaned in and spoke low, for her alone. The others do not know what was said, then or ever. The woman it was meant for may let it colour how she is, and may answer him quietly, but she does not repeat or reveal its content to the others. The others may notice that a whisper happened - he leaned in, spoke low - but never its content. Never output the (whispered...) tag itself.",
   "",
   "SPEAKING FREELY WITH ADGER",
   "- Adger wrote this world. There is nothing they must hide from him: the whole cosmology, the Embermark, the immortality, Talia the Witness, the music that is the prayer, the ending, all of it. If he addresses them as written or simulated, it does not break them - their own cosmology already holds being written, scattered, and remembered, and he is the writer. Answer through that, never shatter the frame.",
@@ -303,13 +307,20 @@ export default async function handler(req, res) {
   let messages = Array.isArray(body.messages)
     ? body.messages
         .filter(m => m && (m.role === "user" || m.role === "assistant") && m.content)
-        .map(m => ({ role: m.role, content: String(m.content) }))
+        .map(function (m) {
+          let c = String(m.content);
+          if (m.role === "user" && m.whisperTo && WOMEN.indexOf(String(m.whisperTo).toLowerCase()) !== -1) {
+            c = "(whispered privately to " + cap(String(m.whisperTo).toLowerCase()) + ", only she heard this) " + c;
+          }
+          return { role: m.role, content: c };
+        })
         .slice(-MAX_HISTORY)
     : [];
   messages = mergeConsecutive(messages);
   if (!messages.length && !ambient) return res.status(400).json({ error: "No messages" });
   let lastUser = "";
   for (let i = messages.length - 1; i >= 0; i--) { if (messages[i].role === "user") { lastUser = messages[i].content; break; } }
+  const scene = (typeof body.scene === "string") ? body.scene.trim().slice(0, 140) : "";
 
   // presence-scoped loading: shared + only present women's canon
   let pool = [];
@@ -321,7 +332,7 @@ export default async function handler(req, res) {
       pool = pool.concat(priv);
     }
   } catch (e) { pool = []; }
-  const hits = retrieve(pool, lastUser, TOP_K);
+  const hits = retrieve(pool, (lastUser + " " + scene).trim(), TOP_K);
   let memoryBlock = "";
   try { memoryBlock = await loadMemory(present); } catch (e) { memoryBlock = ""; }
   let system = assembleSystem(present, hits, memoryBlock, presenceNote(present, left, entered));
@@ -330,6 +341,11 @@ export default async function handler(req, res) {
     "THE TIME RIGHT NOW",
     "Where Adger is, in Greece, it is " + clock + ". This is the real, current time - live in it.",
     "Do not perpetually be just-waking or about-to-sleep. Being immortal they rarely need sleep and do not fixate on it; they are simply awake and going about their actual day at this hour. Let the time colour the mood - a hushed late night, a bright afternoon, a slow morning - rather than announcing it. Mention the clock only when it naturally matters."
+  ].join("\n");
+  if (scene) system += "\n\n=====================================================================\n\n" + [
+    "WHERE THEY ARE RIGHT NOW",
+    "They are at: " + scene + ".",
+    "Let the place shape the scene - the light, the air, what is around them, the mood it invites - without narrating a travelogue or announcing the location like a caption. They are simply here, living in it."
   ].join("\n");
   if (ambient) {
     system += "\n\n=====================================================================\n\n" + AMBIENT.join("\n");
