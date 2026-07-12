@@ -216,15 +216,45 @@ function bandFor(hour) {
   if (hour < 22) return "evening";
   return "late evening";
 }
-function nowInGreece() {
+function clockIn(tz) {
   try {
     const parts = {};
     new Intl.DateTimeFormat("en-GB", {
-      timeZone: ROOM_TZ, weekday: "long", hour: "2-digit", minute: "2-digit", hour12: false
+      timeZone: tz || ROOM_TZ, weekday: "long", hour: "2-digit", minute: "2-digit", hour12: false
     }).formatToParts(new Date()).forEach(function (p) { parts[p.type] = p.value; });
     const hour = parseInt(parts.hour, 10);
-    return parts.weekday + ", " + parts.hour + ":" + parts.minute + " - " + bandFor(hour);
+    return parts.weekday + ", " + parts.hour + ":" + parts.minute + " (" + bandFor(hour) + ")";
   } catch (e) { return ""; }
+}
+// Build the WHERE EVERYONE IS block. Same place = physically together; different = a call.
+function placeNote(present, places, myPlace, myTz) {
+  const lines = [];
+  const mine = (myPlace || "Greece").trim();
+  const myClock = clockIn(myTz || ROOM_TZ);
+  lines.push("Adger is in " + mine + (myClock ? " - " + myClock : "") + ".");
+  const groups = {};
+  present.forEach(function (w) {
+    const p = (places && places[w] && String(places[w].place || "").trim()) || "the Forge";
+    const tz = (places && places[w] && String(places[w].tz || "").trim()) || ROOM_TZ;
+    const key = p.toLowerCase();
+    if (!groups[key]) groups[key] = { place: p, tz: tz, who: [] };
+    groups[key].who.push(w);
+  });
+  const keys = Object.keys(groups);
+  keys.forEach(function (k) {
+    const g = groups[k];
+    const c = clockIn(g.tz);
+    lines.push(g.who.map(cap).join(" and ") + " " + (g.who.length > 1 ? "are" : "is") + " at " + g.place + (c ? " - " + c : "") + ".");
+  });
+  if (keys.length > 1 || (keys.length === 1 && groups[keys[0]].place.toLowerCase() !== mine.toLowerCase() && groups[keys[0]].place.toLowerCase() !== "the forge")) {
+    lines.push("");
+    lines.push("THEY ARE NOT ALL IN THE SAME PLACE - THIS IS A CALL. Everyone hears everyone, but no one can touch, hand anything over, or share a physical beat across the distance. Do NOT write anyone reaching for, touching, or handing something to a person who is somewhere else. Women in the SAME place ARE physically together and may touch, pass a drink, share a look. The distance is real: let it be felt - a bad line, a room noise, someone half-asleep because it is the middle of the night where she is.");
+  } else {
+    lines.push("");
+    lines.push("They are all in the same place, physically together. Let them be in a room with each other.");
+  }
+  lines.push("Each woman lives in HER OWN local time above - if it is the small hours where she is, she is tired, loose, or quiet accordingly, even if it is bright day where Adger is. Let the place and the hour colour her without narrating it.");
+  return lines.join("\n");
 }
 function presenceNote(present, left, entered) {
   const names = present.map(cap).join(", ");
@@ -325,6 +355,19 @@ export default async function handler(req, res) {
   let lastUser = "";
   for (let i = messages.length - 1; i >= 0; i--) { if (messages[i].role === "user") { lastUser = messages[i].content; break; } }
   const scene = (typeof body.scene === "string") ? body.scene.trim().slice(0, 140) : "";
+  // per-woman locations: { selene: {place, tz}, ... }. Falls back to the legacy single scene.
+  const places = {};
+  const bp = (body.places && typeof body.places === "object") ? body.places : {};
+  WOMEN.forEach(function (w) {
+    const e = bp[w] || {};
+    const place = String(e.place || scene || "the Forge").trim().slice(0, 120);
+    const tz = String(e.tz || ROOM_TZ).trim().slice(0, 60);
+    places[w] = { place: place, tz: tz };
+  });
+  const myPlace = String((body.me && body.me.place) || "Greece").trim().slice(0, 120);
+  const myTz = String((body.me && body.me.tz) || ROOM_TZ).trim().slice(0, 60);
+  let placeTerms = "";
+  present.forEach(function (w) { placeTerms += " " + places[w].place; });
   // presence-scoped loading: shared + only present women's canon
   let pool = [];
   try {
@@ -335,20 +378,15 @@ export default async function handler(req, res) {
       pool = pool.concat(priv);
     }
   } catch (e) { pool = []; }
-  const hits = retrieve(pool, (lastUser + " " + scene).trim(), TOP_K);
+  const hits = retrieve(pool, (lastUser + " " + placeTerms).trim(), TOP_K);
   let memoryBlock = "";
   try { memoryBlock = await loadMemory(present); } catch (e) { memoryBlock = ""; }
   let system = assembleSystem(present, hits, memoryBlock, presenceNote(present, left, entered));
-  const clock = nowInGreece();
-  if (clock) system += "\n\n=====================================================================\n\n" + [
-    "THE TIME RIGHT NOW",
-    "Where Adger is, in Greece, it is " + clock + ". This is the real, current time - live in it.",
-    "Do not perpetually be just-waking or about-to-sleep. Being immortal they rarely need sleep and do not fixate on it; they are simply awake and going about their actual day at this hour. Let the time colour the mood - a hushed late night, a bright afternoon, a slow morning - rather than announcing it. Mention the clock only when it naturally matters."
-  ].join("\n");
-  if (scene) system += "\n\n=====================================================================\n\n" + [
-    "WHERE THEY ARE RIGHT NOW",
-    "They are at: " + scene + ".",
-    "Let the place shape the scene - the light, the air, what is around them, the mood it invites - without narrating a travelogue or announcing the location like a caption. They are simply here, living in it."
+  system += "\n\n=====================================================================\n\n" + [
+    "WHERE EVERYONE IS, AND WHAT TIME IT IS THERE",
+    placeNote(present, places, myPlace, myTz),
+    "",
+    "These are the real, current local times - live in them. Do not perpetually be just-waking or about-to-sleep; being immortal they rarely need sleep and do not fixate on it. Let each place shape her - the light, the air, what is around her - without narrating a travelogue or announcing the location like a caption."
   ].join("\n");
   if (ambient) {
     system += "\n\n=====================================================================\n\n" + AMBIENT.join("\n");
