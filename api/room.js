@@ -246,12 +246,12 @@ function placeNote(present, places, myPlace, myTz) {
     const c = clockIn(g.tz);
     lines.push(g.who.map(cap).join(" and ") + " " + (g.who.length > 1 ? "are" : "is") + " at " + g.place + (c ? " - " + c : "") + ".");
   });
-  if (keys.length > 1 || (keys.length === 1 && groups[keys[0]].place.toLowerCase() !== mine.toLowerCase() && groups[keys[0]].place.toLowerCase() !== "the forge")) {
+  if (!(keys.length === 1 && keys[0] === mine.toLowerCase())) {
     lines.push("");
-    lines.push("THEY ARE NOT ALL IN THE SAME PLACE - THIS IS A CALL. Everyone hears everyone, but no one can touch, hand anything over, or share a physical beat across the distance. Do NOT write anyone reaching for, touching, or handing something to a person who is somewhere else. Women in the SAME place ARE physically together and may touch, pass a drink, share a look. The distance is real: let it be felt - a bad line, a room noise, someone half-asleep because it is the middle of the night where she is.");
+    lines.push("THEY ARE NOT ALL WHERE ADGER IS - THIS IS A CALL. Everyone hears everyone, but no one can touch, hand anything over, or share a physical beat across the distance. Do NOT write anyone reaching for, touching, or handing something to a person who is somewhere else. Women in the SAME place as each other ARE physically together and may touch, pass a drink, share a look - and any woman in the same place as Adger is physically WITH him. The distance is real: let it be felt - a bad line, a room noise, someone half-asleep because it is the middle of the night where she is.");
   } else {
     lines.push("");
-    lines.push("They are all in the same place, physically together. Let them be in a room with each other.");
+    lines.push("Everyone is in the same place as Adger, physically together with him. Let them be in a room with each other and with him.");
   }
   lines.push("Each woman lives in HER OWN local time above - if it is the small hours where she is, she is tired, loose, or quiet accordingly, even if it is bright day where Adger is. Let the place and the hour colour her without narrating it.");
   return lines.join("\n");
