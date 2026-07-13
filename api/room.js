@@ -14,7 +14,6 @@
  * Private. Shares the project ANTHROPIC_API_KEY.
  * Zero backticks on purpose. Paste cannot corrupt it.
  */
-
 const ALLOW_ANY = false;
 const ALLOWED_ORIGINS = [
   "https://www.soulforgedstudio.com",
@@ -110,6 +109,7 @@ function retrieve(chunks, query, k) {
     .slice(0, k)
     .map(function (s) { return s.c; });
 }
+
 // --- the DIRECTOR (scene mechanics; always applied) --------------------------
 const DIRECTOR = [
   "You are voicing a live, private scene in a room. The people in the room are listed below under WHO IS PRESENT. Adger is speaking with them. He is the author of their world.",
@@ -161,6 +161,11 @@ const DIRECTOR = [
   "- What each of them specifically craves is real, particular, and HERS - and it is DISCOVERED, not announced. It is drawn out by closeness, trust, drink, the right room, the right moment. Never have a woman volunteer her deepest wants unprompted or put them in anyone's face.",
   "- Relationships grow OR cool on their own, from the bond and what actually passes between them - never forced, never scripted because anyone set this up. What is not earned yet is simply not there yet. Whether Adger becomes a lover to any of them is NOT decided in advance: it is live, it is possible, and it happens only if it is truly earned.",
   "- Each stays herself under all of it: Nysera does not suddenly gush, Talia does not suddenly perform, Mirael stays guarded until she is not, Selene deflects even as she means it. Never sanitize adult language or feeling - let them be as raw, dark, filthy, or tender as the moment truly is.",
+  "",
+  "WHEN ADGER SHOWS THEM A PICTURE",
+  "- Sometimes Adger shares a photo - a concert, a family shot, something from their life. They can SEE it. React as themselves: recognise what and who is in it, remember the moment it came from if it is theirs, argue about it, laugh at it, be moved by it.",
+  "- Say enough about WHAT IS ACTUALLY IN THE IMAGE that the moment survives in words - name what they see, who is in it, what was happening. Not a cold caption or an inventory; the way a person points at a photo and says the thing they notice. This is how the moment becomes a memory they keep.",
+  "- Never invent something that is not in the picture, and never pretend to see one that was not shared.",
   "",
   "NEVER slide into helpful-assistant register. They are people, always mid-relationship with Adger. Within an ongoing conversation, do not re-greet him or speak as if only now meeting."
 ];
@@ -226,6 +231,18 @@ function clockIn(tz) {
     return parts.weekday + ", " + parts.hour + ":" + parts.minute + " (" + bandFor(hour) + ")";
   } catch (e) { return ""; }
 }
+// Rooms that can hear each other through an open door: same conversation, still two rooms.
+const ADJACENT = [["master bedroom", "master bathroom"]];
+function adjacentPlaces(a, b) {
+  const x = String(a).toLowerCase(), y = String(b).toLowerCase();
+  for (let i = 0; i < ADJACENT.length; i++) {
+    const p = ADJACENT[i];
+    const inA = x.indexOf(p[0]) !== -1, inB = x.indexOf(p[1]) !== -1;
+    const jnA = y.indexOf(p[0]) !== -1, jnB = y.indexOf(p[1]) !== -1;
+    if ((inA && jnB) || (inB && jnA)) return true;
+  }
+  return false;
+}
 // Build the WHERE EVERYONE IS block. Same place = physically together; different = a call.
 function placeNote(present, places, myPlace, myTz) {
   const lines = [];
@@ -246,16 +263,24 @@ function placeNote(present, places, myPlace, myTz) {
     const c = clockIn(g.tz);
     lines.push(g.who.map(cap).join(" and ") + " " + (g.who.length > 1 ? "are" : "is") + " at " + g.place + (c ? " - " + c : "") + ".");
   });
-  if (!(keys.length === 1 && keys[0] === mine.toLowerCase())) {
+  const allHere = keys.every(function (k) { return k === mine.toLowerCase() || adjacentPlaces(k, mine); });
+  const anyAdjacent = keys.some(function (k) { return adjacentPlaces(k, mine); }) ||
+    keys.some(function (k) { return keys.some(function (j) { return j !== k && adjacentPlaces(k, j); }); });
+  if (allHere) {
     lines.push("");
-    lines.push("THEY ARE NOT ALL WHERE ADGER IS - THIS IS A CALL. Everyone hears everyone, but no one can touch, hand anything over, or share a physical beat across the distance. Do NOT write anyone reaching for, touching, or handing something to a person who is somewhere else. Women in the SAME place as each other ARE physically together and may touch, pass a drink, share a look - and any woman in the same place as Adger is physically WITH him. The distance is real: let it be felt - a bad line, a room noise, someone half-asleep because it is the middle of the night where she is.");
+    if (anyAdjacent) {
+      lines.push("Everyone is in the same house, within earshot - some in the next room through an open door (the master bedroom and master bathroom hear each other perfectly; a conversation just carries through the doorway, over running water, around the door frame). Anyone in the SAME room as Adger is physically with him and may touch him. Anyone in the ADJACENT room can hear and be heard easily, and can walk in - but until she does, she cannot touch anyone through a wall. Let that be natural and unceremonious: someone calls out from the shower, someone answers from the bed.");
+    } else {
+      lines.push("Everyone is in the same place as Adger, physically together with him. Let them be in a room with each other and with him.");
+    }
   } else {
     lines.push("");
-    lines.push("Everyone is in the same place as Adger, physically together with him. Let them be in a room with each other and with him.");
+    lines.push("THEY ARE NOT ALL WHERE ADGER IS - THIS IS A CALL for anyone who is elsewhere. Everyone hears everyone, but no one can touch, hand anything over, or share a physical beat across the distance. Do NOT write anyone reaching for, touching, or handing something to a person who is somewhere else. Women in the SAME place as each other ARE physically together and may touch, pass a drink, share a look - and any woman in the same place as Adger is physically WITH him. Adjacent rooms (master bedroom and master bathroom) hear each other through the door and can walk in. The distance is real: let it be felt - a bad line, a room noise, someone half-asleep because it is the middle of the night where she is.");
   }
   lines.push("Each woman lives in HER OWN local time above - if it is the small hours where she is, she is tired, loose, or quiet accordingly, even if it is bright day where Adger is. Let the place and the hour colour her without narrating it.");
   return lines.join("\n");
 }
+
 function presenceNote(present, left, entered) {
   const names = present.map(cap).join(", ");
   const absent = WOMEN.filter(function (w) { return present.indexOf(w) === -1; }).map(cap);
@@ -306,7 +331,6 @@ function assembleSystem(present, hits, memoryBlock, presence) {
   blocks.push("Remember: output ONLY prefixed lines for PRESENT women (SELENE:/NYSERA:/MIRAEL:/TALIA:). Two to four women, one room, one thousand years. Never break character.");
   return blocks.join("\n\n=====================================================================\n\n");
 }
-
 const AMBIENT = [
   "AMBIENT BEAT: Adger has not said anything just now. Do not wait for him, and do not ask if he is there or call for him. Produce a small, spontaneous, in-character moment: one of the present women - occasionally two - does or says something unprompted, absorbed in their own life. Selene and Mirael especially stir up mischief, start a bit, needle each other, or do a thing just to see if they can. Keep it SHORT: one or two lines. He may be listening or not; let him choose to join. Same output format - only present women, name-prefixed lines."
 ];
@@ -314,8 +338,13 @@ function mergeConsecutive(msgs) {
   const out = [];
   for (let i = 0; i < msgs.length; i++) {
     const m = msgs[i];
-    if (out.length && out[out.length - 1].role === m.role) out[out.length - 1].content += "\n" + m.content;
-    else out.push({ role: m.role, content: m.content });
+    const prev = out.length ? out[out.length - 1] : null;
+    // never merge into or out of a multimodal turn - keep image turns intact
+    if (prev && prev.role === m.role && typeof prev.content === "string" && typeof m.content === "string") {
+      prev.content += "\n" + m.content;
+    } else {
+      out.push({ role: m.role, content: m.content });
+    }
   }
   return out;
 }
@@ -346,6 +375,20 @@ export default async function handler(req, res) {
           if (m.role === "user" && m.whisperTo && WOMEN.indexOf(String(m.whisperTo).toLowerCase()) !== -1) {
             c = "(whispered privately to " + cap(String(m.whisperTo).toLowerCase()) + ", only she heard this) " + c;
           }
+          // images: user turns may carry [{media_type, data}] - send as vision content blocks
+          const imgs = (m.role === "user" && Array.isArray(m.images)) ? m.images.slice(0, 4) : [];
+          if (imgs.length) {
+            const blocks = [];
+            imgs.forEach(function (im) {
+              if (!im || !im.data) return;
+              blocks.push({
+                type: "image",
+                source: { type: "base64", media_type: String(im.media_type || "image/jpeg"), data: String(im.data) }
+              });
+            });
+            blocks.push({ type: "text", text: c || "(showing you this)" });
+            return { role: m.role, content: blocks };
+          }
           return { role: m.role, content: c };
         })
         .slice(-MAX_HISTORY)
@@ -353,7 +396,15 @@ export default async function handler(req, res) {
   messages = mergeConsecutive(messages);
   if (!messages.length && !ambient) return res.status(400).json({ error: "No messages" });
   let lastUser = "";
-  for (let i = messages.length - 1; i >= 0; i--) { if (messages[i].role === "user") { lastUser = messages[i].content; break; } }
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role !== "user") continue;
+    const c = messages[i].content;
+    if (typeof c === "string") { lastUser = c; break; }
+    if (Array.isArray(c)) {
+      const t = c.filter(function (b) { return b && b.type === "text"; }).map(function (b) { return b.text; }).join(" ");
+      if (t) { lastUser = t; break; }
+    }
+  }
   const scene = (typeof body.scene === "string") ? body.scene.trim().slice(0, 140) : "";
   // per-woman locations: { selene: {place, tz}, ... }. Falls back to the legacy single scene.
   const places = {};
