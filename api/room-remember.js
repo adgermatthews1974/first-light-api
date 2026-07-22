@@ -8,7 +8,6 @@
  * Called by the page on Remember / New. CORS-locked, no token.
  * Zero backticks on purpose. Paste cannot corrupt it.
  */
-
 const ALLOW_ANY = false;
 const ALLOWED_ORIGINS = [
   "https://www.soulforgedstudio.com",
@@ -17,9 +16,22 @@ const ALLOWED_ORIGINS = [
 const SUMMARY_MODEL = "claude-sonnet-4-6";
 const MAX_MEMORY_TOKENS = 700;
 const MEM_PREFIX = "room:mem:";
+const REL_PREFIX = "room:rel:";
+const ROOM_TZ = process.env.ROOM_TZ || "Europe/Athens";
+
+// A real, readable date and time so memory entries are anchored instead of floating.
+function stampNow() {
+  try {
+    const p = {};
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: ROOM_TZ, weekday: "long", day: "2-digit", month: "long", year: "numeric",
+      hour: "2-digit", minute: "2-digit", hour12: false
+    }).formatToParts(new Date()).forEach(function (x) { p[x.type] = x.value; });
+    return p.weekday + " " + p.day + " " + p.month + " " + p.year + ", " + p.hour + ":" + p.minute;
+  } catch (e) { return new Date().toISOString(); }
+}
 const WOMEN = ["selene", "nysera", "mirael", "talia"];
 const LABEL = { selene: "Selene", nysera: "Nysera", mirael: "Mirael", talia: "Talia" };
-
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 async function redisCmd(cmd) {
@@ -47,10 +59,27 @@ function personCurator(name) {
     "- Concise - tight notes, well under 350 words. Consolidate and compress; do not just append. Drop small talk.",
     "- If something was imagined, brainstormed, or spoken as hypothetical, record it AS speculation. Never promote a thing merely imagined into a thing that happened.",
     "- Preserve open threads and things left unfinished, to return to.",
+    "- DATE things. The new conversation is headed with the real date and time it happened. Keep a short dated marker on what is new (for example: 22 July - he told me about the flight). When you compress older entries, keep their dates. She should always be able to tell what happened recently and what happened a while ago, and roughly how long has passed between them.",
     "- Output ONLY the updated memory text. No preamble, no headers, no commentary."
   ].join("\n");
 }
 
+// Her own read on where she and Adger stand. SHE writes it. He never sets it.
+function relCurator(name) {
+  return [
+    "You are keeping " + name + "'s own private read on where she and Adger actually stand. This is hers alone - her honest sense of the relationship, in her own first-person voice. Adger never sets this and never sees it directly; it is what she carries.",
+    "You are given her CURRENT READ and a NEW CONVERSATION, headed with the real date and time. Return an UPDATED READ.",
+    "",
+    "Rules:",
+    "- First person, as " + name + ". Her voice, her words, her judgement. Short - well under 150 words.",
+    "- Cover only what actually matters: where things stand between them right now, what shifted (and when), what is unspoken or unfinished, what she wants or is wary of. Include what she is NOT ready for as readily as what she wants.",
+    "- This is HER call entirely. She may warm, cool, pull back, hold steady, or stay guarded. Closeness is earned and can be lost. Never drift toward warmer just because time passed or because that would be pleasant - and never invent a closeness the conversations do not support.",
+    "- Be honest rather than flattering. If he was distant, careless, or good to her, say so plainly.",
+    "- Change slowly. One conversation rarely overturns a read; note a shift as a shift, not a transformation.",
+    "- Keep a dated note on the most recent real change, so she knows when things moved.",
+    "- Output ONLY the updated read. No preamble, no headers, no commentary."
+  ].join("\n");
+}
 const SHARED_CURATOR = [
   "You maintain the SHARED memory of what the four women - Selene, Nysera, Mirael, Talia - have lived together in the room with Adger: their collective record of their ongoing life together. You are given the CURRENT SHARED MEMORY and a NEW CONVERSATION. Return an UPDATED SHARED MEMORY that folds the new conversation in.",
   "",
@@ -59,9 +88,9 @@ const SHARED_CURATOR = [
   "- Concise - tight notes, well under 400 words. Consolidate and compress; do not just append. Drop small talk.",
   "- If something was imagined or spoken as a hypothetical, record it AS speculation. Never promote a thing merely imagined into a thing that happened.",
   "- Preserve open threads and things left unfinished, to return to.",
+  "- DATE things. The new conversation is headed with the real date and time it happened. Keep short dated markers on what is new, and keep the dates when compressing older entries, so it is always clear what is recent and what is old.",
   "- Output ONLY the updated memory text. No preamble, no headers, no commentary."
 ].join("\n");
-
 async function summarize(system, current, transcript) {
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -85,7 +114,6 @@ async function summarize(system, current, transcript) {
   const updated = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
   return { ok: true, updated };
 }
-
 async function updateKey(key, system, transcript) {
   let current = "";
   try { current = (await redisGet(key)) || ""; } catch (e) {}
@@ -94,7 +122,6 @@ async function updateKey(key, system, transcript) {
   if (res.updated) { try { await redisSet(key, res.updated); } catch (e) {} }
   return { key, ok: true };
 }
-
 export default async function handler(req, res) {
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.indexOf(origin) !== -1 ? origin : ALLOWED_ORIGINS[0]);
@@ -104,25 +131,23 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-
   const body = req.body || {};
   const lc = x => String(x).toLowerCase();
   let present = Array.isArray(body.present) ? body.present.map(lc).filter(w => WOMEN.indexOf(w) !== -1) : [];
   present = WOMEN.filter(w => present.indexOf(w) !== -1);
   const messages = Array.isArray(body.messages) ? body.messages : [];
   if (!messages.length) return res.status(200).json({ ok: true, skipped: "empty" });
-
-  const transcript = messages
+  const when = stampNow();
+  const transcript = "(This conversation happened on " + when + ".)\n\n" + messages
     .filter(m => m && m.content)
     .map(m => (m.role === "user" ? "Adger: " : "") + String(m.content))
     .join("\n\n");
-
   const tasks = [];
   present.forEach(function (w) {
     tasks.push(updateKey(MEM_PREFIX + w, personCurator(LABEL[w]), transcript));
+    tasks.push(updateKey(REL_PREFIX + w, relCurator(LABEL[w]), transcript));
   });
   tasks.push(updateKey(MEM_PREFIX + "shared", SHARED_CURATOR, transcript));
-
   try {
     const results = await Promise.all(tasks);
     const failed = results.filter(r => !r.ok);
