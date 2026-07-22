@@ -24,6 +24,7 @@ const MAX_TOKENS = 1000;
 const WOMEN = ["selene", "nysera", "mirael", "talia"];
 const KNOW_PREFIX = "sim:knowledge:";
 const MEM_PREFIX = "room:mem:";
+const REL_PREFIX = "room:rel:";
 const MAX_HISTORY = 30;   // defensive cap; the page also trims
 const TOP_K = 8;          // retrieved knowledge chunks per message
 const ROOM_TZ = process.env.ROOM_TZ || "Europe/Athens";  // their day runs on Greece time (override with env if you move)
@@ -315,6 +316,23 @@ async function loadMemory(present) {
   if (!parts.length) return "";
   return "\n\nMEMORY (their ongoing life with Adger; treat it as lived and true):\n" + parts.join("\n\n");
 }
+
+// Each woman's own private read on where she and Adger stand. Hers, not his.
+async function loadRelations(present) {
+  const parts = [];
+  for (let i = 0; i < present.length; i++) {
+    const r = await redisGet(REL_PREFIX + present[i]);
+    if (r) parts.push(cap(present[i]) + ", in her own words:\n" + r);
+  }
+  if (!parts.length) return "";
+  return [
+    "\n\nWHERE EACH OF THEM STANDS WITH HIM",
+    "This is each woman's own private read on her relationship with Adger, written by her, carried between conversations. He does not set it and cannot see it.",
+    "Let it govern how she actually is with him right now - how open, how guarded, how warm, what she will and will not reach for. If her read is wary, she is wary, no matter how pleasant the moment; if it is close, that closeness is real and earned. Never contradict her own read to be agreeable, and never announce or quote it - it shows in how she behaves.",
+    "",
+    parts.join("\n\n")
+  ].join("\n");
+}
 function assembleSystem(present, hits, memoryBlock, presence) {
   const blocks = [];
   blocks.push(DIRECTOR.join("\n"));
@@ -432,6 +450,7 @@ export default async function handler(req, res) {
   const hits = retrieve(pool, (lastUser + " " + placeTerms).trim(), TOP_K);
   let memoryBlock = "";
   try { memoryBlock = await loadMemory(present); } catch (e) { memoryBlock = ""; }
+  try { memoryBlock += await loadRelations(present); } catch (e) {}
   let system = assembleSystem(present, hits, memoryBlock, presenceNote(present, left, entered));
   system += "\n\n=====================================================================\n\n" + [
     "WHERE EVERYONE IS, AND WHAT TIME IT IS THERE",
