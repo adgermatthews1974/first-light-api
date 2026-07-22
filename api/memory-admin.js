@@ -14,7 +14,6 @@
  * Ops: migrate | verify | peek.
  * Zero backticks on purpose. Paste cannot corrupt it.
  */
-
 const PAIRS = [
   { from: "forge:memory", to: "room:mem:shared" },
   { from: "selene:memory", to: "room:mem:selene" },
@@ -22,7 +21,7 @@ const PAIRS = [
 ];
 const SOURCE_KEYS = ["forge:memory", "selene:memory", "nysera:memory"];
 const ROOM_KEYS = ["room:mem:shared", "room:mem:selene", "room:mem:nysera", "room:mem:mirael", "room:mem:talia"];
-
+const REL_KEYS = ["room:rel:selene", "room:rel:nysera", "room:rel:mirael", "room:rel:talia"];
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 async function redisCmd(cmd) {
@@ -53,23 +52,29 @@ function summary(v) {
   if (v === null) return { present: null, note: "read error" };
   return { present: v.length > 0, len: v.length };
 }
-
 async function opVerify() {
   const sources = {}, rooms = {};
   for (let i = 0; i < SOURCE_KEYS.length; i++) sources[SOURCE_KEYS[i]] = summary(await getKey(SOURCE_KEYS[i]));
   for (let i = 0; i < ROOM_KEYS.length; i++) rooms[ROOM_KEYS[i]] = summary(await getKey(ROOM_KEYS[i]));
   return { status: 200, body: { ok: true, op: "verify", sources, rooms } };
 }
-
 async function opPeek(key) {
   if (!key) return { status: 400, body: { error: "peek needs a key" } };
-  if (SOURCE_KEYS.indexOf(key) === -1 && ROOM_KEYS.indexOf(key) === -1)
+  if (SOURCE_KEYS.indexOf(key) === -1 && ROOM_KEYS.indexOf(key) === -1 && REL_KEYS.indexOf(key) === -1)
     return { status: 400, body: { error: "peek only allowed on known memory keys" } };
   const v = await getKey(key);
   if (v === null) return { status: 502, body: { error: "read failed for " + key } };
   return { status: 200, body: { ok: true, op: "peek", key, value: v } };
 }
-
+async function opDumpAll() {
+  const out = {};
+  const all = ROOM_KEYS.concat(REL_KEYS);
+  for (let i = 0; i < all.length; i++) {
+    const v = await getKey(all[i]);
+    out[all[i]] = (v === null) ? { error: "read failed" } : { len: v.length, value: v };
+  }
+  return { status: 200, body: { ok: true, op: "dumpall", keys: out } };
+}
 async function opMigrate(force) {
   const results = [];
   for (let i = 0; i < PAIRS.length; i++) {
@@ -84,7 +89,6 @@ async function opMigrate(force) {
   }
   return { status: 200, body: { ok: true, op: "migrate", note: "originals untouched", results } };
 }
-
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.soulforgedstudio.com");
   res.setHeader("Vary", "Origin");
@@ -92,20 +96,19 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-knowledge-token");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-
   const body = req.body || {};
   const token = req.headers["x-knowledge-token"] || body.token || "";
   const expected = process.env.MEMORY_ADMIN_TOKEN || process.env.KNOWLEDGE_ADMIN_TOKEN || "";
   if (!expected) return res.status(500).json({ error: "no admin token set" });
   if (token !== expected) return res.status(401).json({ error: "unauthorized" });
-
   const op = String(body.op || "").toLowerCase();
   try {
     let out;
     if (op === "migrate") out = await opMigrate(body.force === true);
     else if (op === "verify") out = await opVerify();
     else if (op === "peek") out = await opPeek(body.key);
-    else return res.status(400).json({ error: "unknown op: " + op + " (use migrate|verify|peek)" });
+    else if (op === "dumpall") out = await opDumpAll();
+    else return res.status(400).json({ error: "unknown op: " + op + " (use migrate|verify|peek|dumpall)" });
     return res.status(out.status).json(out.body);
   } catch (e) {
     return res.status(500).json({ error: String(e) });
