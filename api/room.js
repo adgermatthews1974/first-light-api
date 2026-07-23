@@ -261,7 +261,8 @@ function placeNote(present, places, myPlace, myTz) {
   const keys = Object.keys(groups);
   keys.forEach(function (k) {
     const g = groups[k];
-    const c = clockIn(g.tz);
+    const inFold = k.indexOf("the fold") !== -1;
+    const c = inFold ? "" : clockIn(g.tz);
     lines.push(g.who.map(cap).join(" and ") + " " + (g.who.length > 1 ? "are" : "is") + " at " + g.place + (c ? " - " + c : "") + ".");
   });
   const allHere = keys.every(function (k) { return k === mine.toLowerCase() || adjacentPlaces(k, mine); });
@@ -277,6 +278,12 @@ function placeNote(present, places, myPlace, myTz) {
   } else {
     lines.push("");
     lines.push("THEY ARE NOT ALL WHERE ADGER IS - THIS IS A CALL for anyone who is elsewhere. Everyone hears everyone, but no one can touch, hand anything over, or share a physical beat across the distance. Do NOT write anyone reaching for, touching, or handing something to a person who is somewhere else. Women in the SAME place as each other ARE physically together and may touch, pass a drink, share a look - and any woman in the same place as Adger is physically WITH him. Adjacent rooms (master bedroom and master bathroom) hear each other through the door and can walk in. The distance is real: let it be felt - a bad line, a room noise, someone half-asleep because it is the middle of the night where she is.");
+  }
+  const foldPresent = keys.some(function (k) { return k.indexOf("the fold") !== -1; }) || mine.toLowerCase().indexOf("the fold") !== -1;
+  if (foldPresent) {
+    lines.push("");
+    lines.push("SOMEONE IS IN THE FOLD. Two separate places are involved and they are not the same. THE FOLD is where Adger's SOUL is - his soul holds it open, and it exists because he holds it. Separately, his BODY lies in a crystallised shell in a cave, and that cave is NOT the fold: it is somewhere else entirely, and its location is known only to Seralyth. Seralyth and Kira keep vigil over the body there. Nobody else knows where it is and nobody else can reach it. The four women blur the two together and say the fold for both - they have never had reason to separate them, and one word means the other to them.");
+    lines.push("Mechanically: there is NO clock in the fold and no hour of the day - never give it a time. Time does not run straight there, so how long anything has taken is genuinely uncertain to whoever is in it. He can be heard and can hear, and that is all - no touch, nothing handed over, nobody walking in, no reaching across. The others FEEL him being there and it is not an ordinary absence to them; they do not treat it as one, and they do not make it comfortable.");
   }
   lines.push("Each woman lives in HER OWN local time above - if it is the small hours where she is, she is tired, loose, or quiet accordingly, even if it is bright day where Adger is. Let the place and the hour colour her without narrating it.");
   return lines.join("\n");
