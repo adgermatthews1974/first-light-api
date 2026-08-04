@@ -375,6 +375,7 @@ function mergeConsecutive(msgs) {
 }
 
 export default async function handler(req, res) {
+  var archive = require("../lib/mel-archive");
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.indexOf(origin) !== -1 ? origin : ALLOWED_ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Origin", allowOrigin);
@@ -481,8 +482,32 @@ export default async function handler(req, res) {
     });
     if (!r.ok) { const detail = await r.text(); return res.status(502).json({ error: "upstream " + r.status, detail }); }
     const data = await r.json();
-    const reply = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
-    return res.status(200).json({ reply, present });
+    let reply = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
+    var directive = archive.parseDocumentDirective(reply);
+    var documented = null;
+    if(directive){
+      var captured = archive.verbatimFromExchanges(
+        messages.concat([{ role: "assistant", content: reply }]),
+        directive.span
+      );
+      try {
+        var saved = await archive.saveRecord({
+          title: directive.title,
+          tags: directive.tags,
+          present: present,
+          body: captured
+        });
+        documented = {
+          id: saved.record.id,
+          title: saved.record.title,
+          drive: saved.drive
+        };
+      } catch(e){
+        documented = { error: String((e && e.message) || e) };
+      }
+      reply = archive.stripDocumentDirective(reply);
+    }
+    return res.status(200).json({ reply, present, documented });
   } catch (e) {
     return res.status(500).json({ error: String(e) });
   }
