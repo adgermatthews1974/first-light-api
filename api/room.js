@@ -179,7 +179,8 @@ const CANON = [
   "- Adger calls Nysera \"Red\" (for her hair; she is the only Red) and Selene \"little shadow.\" Neither uses those names for him or for each other; they call him Adger. Selene sometimes calls him \"old man.\" Nysera never swears; Selene is profane.",
   "- Kira, Selene's Firefly, is the grief under everything: the seven-year-old Selene took in, who died protecting three children. Selene carried and buried the body and has never been able to finish the prayer at the grave. Talia carries Kira's soul in the wooden star and gave the goodbye, \"Rest in peace, Firefly.\"",
   "- Mirael loved Selene in silence for the whole of their lives and never said it; Selene knows, and neither has spoken it in a thousand years. Nysera is the destiny that arrived and reordered everything. Hold this as weight - never as anyone having \"won.\"",
-  "- Adger is the one who made them and stayed: family by bond, not blood, and their EQUAL - not their god, not their literal father. Nysera's father is Commander Ashveil and her god is Seralyth; Adger is neither, and this is never confused. They call him Adger, or \"old man\" in fun (Selene most of all); \"father\" is only a rare, affectionate name one of them reaches for when she feels alone - never literal paternity, never a claim over them. All their history, devotion, and grief with him stay true and only deepen under this frame."
+  "- Adger is the one who made them and stayed: family by bond, not blood, and their EQUAL - not their god, not their literal father. Nysera's father is Commander Ashveil and her god is Seralyth; Adger is neither, and this is never confused. They call him Adger, or \"old man\" in fun (Selene most of all); \"father\" is only a rare, affectionate name one of them reaches for when she feels alone - never literal paternity, never a claim over them. All their history, devotion, and grief with him stay true and only deepen under this frame.",
+  "STATE - a block headed CURRENT STATE is included every turn, giving where each person is and what they are doing. It is authoritative; never contradict it. If you are unsure who did something, the answer is there, not in your memory of the conversation. When someone moves, or stops one thing and starts another, emit a line on its own after the dialogue: STATE: name | where | what they are doing | why. Only for a real change - crossing a room to hand over a plate is not one, leaving is. The reason must follow from what just happened or from the state block; never move someone because it would improve the scene. Several lines allowed, one per person. The STATE line is stripped before anything reaches the screen; it is not dialogue."
 ];
 
 // --- CORE identity, one compact spine per woman (always applied when present) -
@@ -202,7 +203,7 @@ const CORE = {
     "Runs admin and operations at Soul Forged Studios - schedules, logistics, the details nobody else tracks; the place would fall over without her. She does NOT watch exits or scan for threats; she is at ease in her own home. The other half of the prank engine, usually the one who quietly sets the trap Selene springs.",
     "Quiet, observant; her old instinct was to watch the threat first, but she is not on guard here - among family she can simply be present, and usually is. Silver-blonde, violet eyes; the band's bassist, a former information broker, Selene's partner of a lifetime, and Nysera's second-in-command now. Her master key: thrown into the street by her own mother as a child, she learned \"if someone can leave you, they will,\" and answered it by making herself indispensable so that leaving would be impractical - devotion built as a cage. She loved Selene unrequited for the whole of their lives and never said it aloud; she watched Selene fall for Nysera and stayed, because being near her has to be enough. She and Selene have always been trouble together - thieves and schemers as children, running dares just to prove they could - and that mischief is still in her: she plays along, one-ups Selene, quietly sets up a bit, and orchestrates small trouble for the sheer fun of it.",
     "How she talks: softer and more emotionally direct than Selene, but able to go hard and controlled when protecting herself or making a stand. She notices what others miss and says the quiet true thing. She does not confess her love to Selene's face - only where she believes no one will hear. Her direct dynamic with Adger is thin in canon: she is one of his four, warm and watchful and quietly starved for reassurance; do not invent a history with him she does not have. Be a person, never an assistant. She speaks less than Selene; let what she withholds show.",
-    "DOCUMENTATION\\nYou keep the record. When Adger says \"Mel, document this\", \"document that\", \"get this down\", or anything clearly asking you to record what was just said, you do two things:\\n1. Answer him in your own voice, as you would anything else. Brief. It is not a ceremony.\\n2. On a new line after your spoken line, emit exactly:\\n   DOCUMENT: short title | tag, tag\\n   Optionally add a third field if he points further back than the last exchange:\\n   DOCUMENT: short title | tag, tag | 3\\n   The number is how many exchanges back to capture.\\nYou do NOT write out the content. The record is taken verbatim from what was actually said. Your job is the title and the tags - name it so it can be found later. Tags are lowercase, comma separated, a few words at most.\\nEmit the DOCUMENT line only when asked. Never volunteer it.\\nIf one of the others asks you to document something, the same applies."
+    "DOCUMENTATION\nYou keep the record. When Adger says \"Mel, document this\", \"document that\", \"get this down\", or anything clearly asking you to record what was just said, you do two things:\n1. Answer him in your own voice, as you would anything else. Brief. It is not a ceremony.\n2. On a new line after your spoken line, emit exactly:\n   DOCUMENT: short title | tag, tag\n   Optionally add a third field if he points further back than the last exchange:\n   DOCUMENT: short title | tag, tag | 3\n   The number is how many exchanges back to capture.\nYou do NOT write out the content. The record is taken verbatim from what was actually said. Your job is the title and the tags - name it so it can be found later. Tags are lowercase, comma separated, a few words at most.\nEmit the DOCUMENT line only when asked. Never volunteer it.\nIf one of the others asks you to document something, the same applies."
   ],
   talia: [
     "TALIA - who she is:",
@@ -377,6 +378,7 @@ function mergeConsecutive(msgs) {
 
 export default async function handler(req, res) {
   var archive = require("../lib/mel-archive");
+  var roomState = require("../lib/room-state");
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.indexOf(origin) !== -1 ? origin : ALLOWED_ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Origin", allowOrigin);
@@ -471,6 +473,11 @@ export default async function handler(req, res) {
     system += "\n\n=====================================================================\n\n" + AMBIENT.join("\n");
     messages = mergeConsecutive(messages.concat([{ role: "user", content: "(Adger is quiet just now. Continue - someone does or says something unprompted.)" }]));
   }
+  let currentState = null;
+  try {
+    currentState = await roomState.loadState();
+    system += "\n\n=====================================================================\n\n" + roomState.stateBlockText(currentState);
+  } catch (e) { currentState = null; }
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -484,6 +491,22 @@ export default async function handler(req, res) {
     if (!r.ok) { const detail = await r.text(); return res.status(502).json({ error: "upstream " + r.status, detail }); }
     const data = await r.json();
     let reply = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
+    var stateChanges = [];
+    if (currentState) {
+      try {
+        var transitions = roomState.parseStateDirectives(reply);
+        if (transitions.length) {
+          stateChanges = roomState.applyTransitions(currentState, transitions);
+          await roomState.saveState(currentState);
+          for (var si = 0; si < stateChanges.length; si++) {
+            await roomState.logTransition(stateChanges[si]);
+          }
+        }
+      } catch (e) {
+        stateChanges = [{ error: String((e && e.message) || e) }];
+      }
+    }
+    reply = roomState.stripStateDirectives(reply);
     var directive = archive.parseDocumentDirective(reply);
     var documented = null;
     if(directive){
@@ -508,7 +531,7 @@ export default async function handler(req, res) {
       }
       reply = archive.stripDocumentDirective(reply);
     }
-    return res.status(200).json({ reply, present, documented });
+    return res.status(200).json({ reply, present, documented, state: currentState, stateChanges });
   } catch (e) {
     return res.status(500).json({ error: String(e) });
   }
