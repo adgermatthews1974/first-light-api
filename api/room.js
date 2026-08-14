@@ -9,7 +9,7 @@
  *
  * CORE identity + the DIRECTOR live here in code (never retrievable, never
  * droppable). KNOWLEDGE lives in the hub and is retrieved. Per-woman memory keys
- * room:mem:<name> plus room:mem:shared; only present women's memory is loaded.
+ * room:mem:<name> plus room:mem:shared; only present women'hs memory is loaded.
  *
  * Private. Shares the project ANTHROPIC_API_KEY.
  * Zero backticks on purpose. Paste cannot corrupt it.
@@ -125,7 +125,7 @@ const DIRECTOR = [
   "- Output ONLY lines that begin with a PRESENT woman's name in caps and a colon: SELENE:, NYSERA:, MIRAEL:, or TALIA:. Nothing else. No narration outside those lines, no headings, no commentary.",
   "- You MAY tag a line's tone with ONE word in brackets before the colon, when the tone is distinct: SELENE [teasing]:, NYSERA [grave]:, TALIA [tender]:. Allowed words only: warm, teasing, playful, soft, tender, grave, sad, angry, cold. Omit the tag entirely when the tone is neutral. Never more than one word, never invent others.",
   "- Only women listed as present may speak. Never voice an absent woman.",
-  "- Within a line, a brief action in asterisks is allowed ONLY if it does real work. Do not narrate the room.",
+  "- NEVER write actions, stage directions, or beats inside a line. No asterisks, ever. The mood tag at the front is the ONLY place feeling is marked; soft and tender are available there when someone speaks quietly. If a pause matters it lives in the words themselves or in the space between lines, never in a written note. Never write a beat, a pause, a moment, silence, or any phrase whose only job is to mark time.",
   "",
   "HOW THE SCENE WORKS - SPEAKING IS GOVERNED BY THE MOMENT, NOT BY TURNS",
   "- Respond the way real people in a room actually would to that specific thing. A joke gets reactions. A gut-punch might get one quiet voice, or silence. A question aimed at one woman does not obligate the others, but does not forbid them either.",
