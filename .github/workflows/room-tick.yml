@@ -1,0 +1,21 @@
+name: room tick
+# Every 15 minutes the house checks whether one of them would reach out to Adger.
+# The call carries the passphrase from the repository secret ROOM_KEY.
+# Nothing said ever appears here: the server only answers whether a text went out.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+permissions: {}
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Knock on the room
+        env:
+          ROOM_KEY: ${{ secrets.ROOM_KEY }}
+        run: |
+          if [ -z "$ROOM_KEY" ]; then echo "No ROOM_KEY secret yet, nothing to do."; exit 0; fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 -X POST https://first-light-api.vercel.app/api/room -H 'Content-Type: application/json' -H "x-room-key: $ROOM_KEY" -d '{"op":"tick"}' || true)
+          echo "HTTP $code"
