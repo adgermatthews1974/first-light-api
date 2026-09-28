@@ -383,6 +383,7 @@ function presenceNote(present, left, entered) {
 }
 function labelFor(scope) {
   if (scope === "shared") return "[shared - all four know this]";
+  if (scope === "site") return "[the studio's own website, public, as it reads today - all four know it the way you know your own shop window]";
   return "[" + cap(scope) + "'s private interiority - hers to speak from]";
 }
 async function loadScopeChunks(scope) {
@@ -601,6 +602,8 @@ export default async function handler(req, res) {
   var roomWeather = require("../lib/room-weather");
   var roomLife = require("../lib/room-life");
   var roomPush = require("../lib/room-push");
+  var roomSite = require("../lib/room-site");
+  var roomYT = require("../lib/room-youtube");
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.indexOf(origin) !== -1 ? origin : ALLOWED_ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Origin", allowOrigin);
@@ -789,6 +792,38 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
       if (op === "timeline") return res.status(200).json({ ok: true, timeline: roomLife.todayTimeline(currentState, new Date(), settings) });
+      if (op === "memoryView") {
+        const mem = {}, rel = {};
+        for (const w of WOMEN) { mem[w] = (await redisGet(MEM_PREFIX + w)) || ""; rel[w] = (await redisGet(REL_PREFIX + w)) || ""; }
+        mem.shared = (await redisGet(MEM_PREFIX + "shared")) || "";
+        return res.status(200).json({ ok: true, mem: mem, rel: rel });
+      }
+      if (op === "archiveList") {
+        const idx = await archive.loadIndex();
+        return res.status(200).json({ ok: true, records: idx.slice(0, 400) });
+      }
+      if (op === "archiveRecord") {
+        const rec = await archive.getRecord(String(body.id || ""));
+        return rec ? res.status(200).json({ ok: true, record: rec }) : res.status(404).json({ error: "not found" });
+      }
+      if (op === "knowledgeScopes") {
+        const scopes = [];
+        for (const sc of ["shared", "selene", "nysera", "mirael", "talia", "site"]) {
+          const chunks = await loadScopeChunks(sc);
+          scopes.push({ scope: sc, count: chunks.length });
+        }
+        let yt = null;
+        try { const snap = await roomYT.snapshot(); if (snap) yt = { at: snap.at, subs: snap.subs, views: snap.views, videos: (snap.videos || []).slice(0, 50), comments: snap.comments || [], moments: snap.moments || [] }; } catch (e) {}
+        return res.status(200).json({ ok: true, scopes: scopes, site: await roomSite.meta(), youtube: yt, youtubeKey: !!process.env.YOUTUBE_API_KEY });
+      }
+      if (op === "knowledgeScope") {
+        const sc = String(body.scope || "");
+        if (["shared", "selene", "nysera", "mirael", "talia", "site"].indexOf(sc) === -1) return res.status(400).json({ error: "unknown scope" });
+        const chunks = await loadScopeChunks(sc);
+        return res.status(200).json({ ok: true, chunks: chunks.map(function (c) { return { id: c.id, title: c.title || "", text: c.text || "", url: c.url || "" }; }) });
+      }
+      if (op === "siteRefresh") return res.status(200).json(await roomSite.refresh());
+      if (op === "ytRefresh") return res.status(200).json(await roomYT.refresh());
       if (op === "pushKey") return res.status(200).json({ ok: true, publicKey: (await roomPush.vapid()).publicKey });
       if (op === "pushSubscribe") {
         const rec = await roomPush.subscribe(body.subscription, body.label);
@@ -809,6 +844,11 @@ export default async function handler(req, res) {
         const now = new Date();
         const P = settings.push || {};
         const force = body.force === true;
+        // housekeeping on the same knock: the website once a day, the channel every few hours
+        if (!force) {
+          try { if (await roomSite.due()) await roomSite.refresh(); } catch (e) {}
+          try { if (await roomYT.due()) await roomYT.refresh(); } catch (e) {}
+        }
         const say = function (why, sent) { return res.status(200).json({ ok: true, sent: !!sent, why: why }); };
         if (P.on === false && !force) return say("off");
         const subs = await roomPush.loadSubs();
@@ -832,7 +872,9 @@ export default async function handler(req, res) {
         if (!who) return say("everyone is asleep");
         const cal = roomLife.calendarNote(settings, now);
         const emberLine2 = roomState.emberNote(currentState, relationTo, now);
-        const msg = await writeText(currentState, settings, who, await weatherP, roomLife, roomWeather, roomState.localStamp, [cal, emberLine2].filter(Boolean).join("\n\n"));
+        let ytNote = "";
+        try { ytNote = await roomYT.channelNote(); } catch (e) {}
+        const msg = await writeText(currentState, settings, who, await weatherP, roomLife, roomWeather, roomState.localStamp, [cal, emberLine2, ytNote].filter(Boolean).join("\n\n"));
         const again = await roomState.loadState();
         again.lastPushAt = now.toISOString();
         again.pushDay = dayKey;
@@ -860,6 +902,8 @@ export default async function handler(req, res) {
   try {
     const shared = await loadScopeChunks("shared");
     pool = pool.concat(shared);
+    // their own website: what the studio says in public, as it read this morning
+    pool = pool.concat(await loadScopeChunks("site"));
     for (let i = 0; i < present.length; i++) {
       const priv = await loadScopeChunks(present[i]);
       pool = pool.concat(priv);
@@ -896,6 +940,14 @@ export default async function handler(req, res) {
   if (currentState) {
     system += "\n\n=====================================================================\n\n" + roomState.stateBlockText(currentState);
   }
+  try {
+    const ytSnap = await roomYT.snapshot();
+    const ytTalk = /youtube|channel|video|views|subscri|comment|upload|premiere|algorithm|single|release|numbers|fans/i.test(recentUser);
+    if (ytSnap && (ytTalk || (ytSnap.moments && ytSnap.moments.length))) {
+      const ytLine = await roomYT.channelNote();
+      if (ytLine) system += "\n\n=====================================================================\n\n" + ytLine;
+    }
+  } catch (e) {}
   const calLine = roomLife.calendarNote(settings, new Date());
   if (calLine) system += "\n\n=====================================================================\n\n" + calLine;
   let notesLine = "";
