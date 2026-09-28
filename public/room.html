@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#0a0808; --stone:#161213; --stone2:#1b1516; --edge:#2c2422;
@@ -357,6 +357,69 @@
     .ember .eb i{background-size:74px 100%}
   }
 
+
+  /* ===== NOTES LEFT FOR HIM ===== */
+  .noteswrap,.setwrap{position:absolute;inset:0;z-index:9;background:rgba(6,5,5,.88);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+    display:flex;justify-content:center;padding:22px 18px;overflow-y:auto}
+  .noteswrap[hidden],.setwrap[hidden],.toast[hidden]{display:none}
+  .notespanel{width:100%;max-width:920px;display:flex;flex-direction:column;gap:18px}
+  .notescards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:22px;align-items:start;padding:6px}
+  .note{position:relative;transform:rotate(var(--tilt,0deg));padding:22px 20px 20px;border-radius:3px;
+    background:#efe6d2;color:#2a2220;box-shadow:0 14px 30px rgba(0,0,0,.55);transition:transform .3s ease}
+  .note:hover{transform:rotate(0deg) scale(1.02)}
+  .note .nh{font-family:"Cinzel",serif;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px;color:#6b5d4f}
+  .note .nt{font-family:"Caveat",cursive;font-size:25px;line-height:1.22;white-space:pre-wrap}
+  .note.n-selene .nh{color:#3f5566} .note.n-nysera .nh{color:#a33a26} .note.n-mirael .nh{color:#5b4a86} .note.n-talia .nh{color:#6e6a78}
+  .note.m-fridge::before{content:"";position:absolute;top:-9px;left:50%;width:20px;height:20px;margin-left:-10px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #fff8, transparent 45%), var(--mag,#b5392c);box-shadow:0 3px 6px rgba(0,0,0,.5)}
+  .note.n-selene{--mag:#5d7a8e} .note.n-nysera{--mag:#b5392c} .note.n-mirael{--mag:#7a64a8} .note.n-talia{--mag:#9a96a6}
+  .note.m-pillow{background:#f4efe6;border-radius:10px}
+  .note.m-desk{background:#f6f1e3 repeating-linear-gradient(180deg, transparent 0 29px, rgba(90,120,160,.25) 29px 30px);background-position:0 44px}
+  .note.m-text{background:#1d2631;color:var(--bone);border-radius:18px 18px 18px 4px;transform:none;border:1px solid #2e3b4a}
+  .note.m-text .nh{color:var(--ash)} .note.m-text .nt{font-family:"EB Garamond",serif;font-size:18px;line-height:1.45}
+  .note.read{opacity:.62}
+  .noteempty{color:var(--ash);font-style:italic}
+  .toast{position:absolute;left:50%;bottom:108px;transform:translateX(-50%);z-index:7;background:rgba(20,16,15,.96);border:1px solid var(--ember-dim);
+    color:var(--bone);font-style:italic;font-size:15px;padding:9px 16px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .toast.pulse{animation:emberpulse 2.2s ease-in-out infinite}
+
+  /* ===== TODAY AT THE FORGE ===== */
+  .timeline{margin-top:4px}
+  .tlrow{display:grid;grid-template-columns:74px 1fr;align-items:center;gap:8px;margin:5px 0}
+  .tlname .n{font-family:"Cinzel",serif;font-size:9px;letter-spacing:.14em;text-transform:uppercase}
+  .tlbar{position:relative;height:16px;border-radius:4px;background:#141010;overflow:hidden;border:1px solid var(--edge)}
+  .tlseg{position:absolute;top:0;bottom:0;border-right:1px solid rgba(10,8,8,.55)}
+  .k-lodge{background:#7a5236} .k-sleep{background:#2b2748} .k-hq{background:#3d5163} .k-music{background:#8a2c22}
+  .k-village{background:#4a6a3e} .k-springs{background:#2f6468} .k-grounds{background:#6a6a3a} .k-away{background:#5a4380}
+  .tlnow{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--bone);box-shadow:0 0 6px var(--bone)}
+  .tlscale{position:relative;height:14px}
+  .tlscale span{position:absolute;transform:translateX(-50%);font-size:10px;color:var(--ash-dim);font-family:"Cinzel",serif}
+  .tlscale span:first-child{transform:none} .tlscale span:last-child{transform:translateX(-100%)}
+  .tllegend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ash-dim);margin:8px 0 4px 82px}
+  .tllegend i{display:inline-block;width:12px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+  /* ===== SETTINGS ===== */
+  .setpanel{width:100%;max-width:760px;display:flex;flex-direction:column;gap:16px}
+  .setpanel section{border:1px solid var(--edge);border-radius:10px;padding:14px 16px;background:rgba(20,16,15,.7)}
+  .setpanel label{display:inline-flex;align-items:center;gap:6px;margin:5px 12px 5px 0;color:var(--ash);font-size:14.5px}
+  .setpanel input,.setpanel select{background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-family:"EB Garamond",serif;
+    font-size:15px;padding:6px 8px;border-radius:6px;color-scheme:dark}
+  .setpanel input[type=number]{width:70px}
+  .setpanel input:focus,.setpanel select:focus{outline:none;border-color:var(--ember)}
+  .evrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--edge)}
+  .evrow b{font-weight:500;color:var(--bone);font-size:16px;margin-right:8px}
+  .evk{font-family:"Cinzel",serif;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember-hi)}
+  .evd{font-size:13.5px;color:var(--ash);margin-top:2px}
+  .evnone{color:var(--ash-dim);font-style:italic;padding:4px 0 8px}
+  .evform{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:12px}
+  .evform #evtitle{flex:1 1 260px}
+  .sethelp{font-size:13px;color:var(--ash-dim);font-style:italic;margin-top:8px}
+  .setfoot{display:flex;justify-content:flex-end;align-items:center;gap:14px;padding-bottom:20px}
+  #setmsg{color:var(--ember-hi);font-style:italic;font-size:14px}
+  #rhdays{display:flex;flex-wrap:wrap;margin-bottom:4px}
+  label.chk{margin-right:10px}
+  @media(max-width:760px){ .notescards{grid-template-columns:1fr} .note .nt{font-size:23px} .tllegend{margin-left:0} }
+
   /* ===== THE LOCK ===== */
   .lock{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:24px;
     background:radial-gradient(ellipse at 50% 42%, rgba(120,36,24,.28), transparent 60%), #0a0808}
@@ -411,6 +474,8 @@
         </div>
         <div class="tools">
           <button class="tool" id="btnMap" title="The lodge and the grounds, and who is where">Map</button>
+          <button class="tool" id="btnNotes" title="What they left for you">Notes</button>
+          <button class="tool" id="btnSettings" title="The calendar and the rhythm of the house">Settings</button>
           <button class="tool" id="btnAmbient" title="Let them speak up on their own when you go quiet">Ambient: On</button>
           <button class="tool" id="btnAuto" title="Let them fold the conversation into memory on their own">Auto-save: On</button>
           <button class="tool" id="btnRemember" title="Save this conversation to their memory">Remember</button>
@@ -440,6 +505,53 @@
       <button class="send" id="go">Send</button>
     </div>
   </div>
+  <div class="noteswrap" id="noteswrap" hidden>
+    <div class="notespanel">
+      <div class="maphead"><div class="bk" id="notestitle">While you were away</div><button class="tool" id="notesClose">Keep them</button></div>
+      <div class="notescards" id="notescards"></div>
+    </div>
+  </div>
+  <div class="setwrap" id="setwrap" hidden>
+    <div class="setpanel">
+      <div class="maphead">
+        <div><div class="bk">Settings</div><div class="hint">Their calendar and the rhythm of the house.</div></div>
+        <button class="tool" id="setClose">Close</button>
+      </div>
+      <section>
+        <div class="mlabel">The calendar</div>
+        <div id="evlist"></div>
+        <div class="evform">
+          <input id="evtitle" placeholder="What is it? ForgeFest, the Burn Me Down video...">
+          <select id="evkind"><option value="concert">Concert</option><option value="video">Video build</option><option value="tour">Tour</option><option value="shoot">Shoot</option><option value="other">Other</option></select>
+          <label>From <input type="date" id="evstart"></label>
+          <label>to <input type="date" id="evend"></label>
+          <label>Starts <input type="time" id="evfrom"></label>
+          <label>ends <input type="time" id="evto"></label>
+          <select id="evplace"></select>
+          <button class="tool" id="evadd">Add to the calendar</button>
+        </div>
+        <div class="sethelp">A concert or a tour within three days means rehearsal every evening. On a concert day they soundcheck three hours before. Leave the times or the place blank for sensible defaults. A multi-day video build runs its hours each day.</div>
+      </section>
+      <section>
+        <div class="mlabel">Rehearsal nights</div>
+        <div id="rhdays"></div>
+        <label>From <input type="time" id="rhfrom"></label><label>to <input type="time" id="rhto"></label>
+      </section>
+      <section>
+        <div class="mlabel">Notes</div>
+        <label class="chk"><input type="checkbox" id="nton"> Leave me notes when I have been away</label>
+        <label>after <input type="number" id="nthours" min="1" max="72" step="1"> hours away</label>
+      </section>
+      <section>
+        <div class="mlabel">The house</div>
+        <label>A move in the story holds for <input type="number" id="hold" min="0.5" max="12" step="0.5"> hours before her day takes back over</label>
+        <label>Adger's ember lasts <input type="number" id="emalone" min="6" max="336" step="1"> hours alone</label>
+        <label>and fills in <input type="number" id="emrest" min="1" max="168" step="1"> hours in the fold</label>
+      </section>
+      <div class="setfoot"><span id="setmsg"></span><button class="send" id="setsave">Save</button></div>
+    </div>
+  </div>
+  <div class="toast" id="toast" hidden></div>
   <div class="lock" id="lock" hidden>
     <form class="lockcard" id="lockForm" autocomplete="on">
       <img src="/room-icon-192.png" alt="">
@@ -470,6 +582,7 @@
         <section class="grounds" id="grounds"></section>
       </div>
       <div class="maplegend" id="maplegend"></div>
+      <div class="timeline" id="timeline"></div>
     </div>
   </div>
 </div>
@@ -511,6 +624,7 @@
     {v:'the CEO office at HQ',                        tz:TZ_FORGE, label:'CEO office'},
     {v:'the security office at HQ',                   tz:TZ_FORGE, label:'Security office'},
     {v:'the Forge rooftop, atop the stage',           tz:TZ_FORGE, label:'Rooftop'},
+    {v:'the stage at the Forge',                      tz:TZ_FORGE, label:'The stage'},
     {v:'the Forge tavern in the Village',             tz:TZ_FORGE, label:'The tavern'},
     {v:'the coffee shop in the Village',              tz:TZ_FORGE, label:'Coffee shop'},
     {v:'the square in the Village',                   tz:TZ_FORGE, label:'Village square'},
@@ -608,13 +722,13 @@
       if(!p) return;
       var row=document.createElement('span');
       var thing = (k==='sera' || k==='virestar');
-      var old = !thing && isOld(p.at);
+      var old = !thing && !p.auto && isOld(p.at);
       row.className='strow st-'+k+(p.absent?' gone':'')+(old?' old':'')+(changed[k]?' flash':'');
       var n=document.createElement('span'); n.className='n'; n.textContent=STATE_LABEL[k];
       var w=document.createElement('span'); w.className='w'; w.textContent=p.where?shortLabel(p.where):'';
       var d=document.createElement('span'); d.className='d'; d.textContent=p.doing||'';
       row.appendChild(n); row.appendChild(w); row.appendChild(d);
-      var ag = k==='virestar' ? '' : (k==='sera' && p.auto) ? 'her routine' : ageLabel(p.at);
+      var ag = k==='virestar' ? '' : p.auto ? (k==='sera' ? 'her routine' : 'her day') : ageLabel(p.at);
       if(ag || (k!=='virestar' && p.since && p.since!=='unknown')){
         var t=document.createElement('span'); t.className='t';
         t.textContent = ag || p.since;
@@ -1054,7 +1168,7 @@
     if(p.indexOf('in the lodge')>-1) return 'lodge';
     if(p==='the forge'||p.indexOf('at hq')>-1||p.indexOf('forge rooftop')>-1||p.indexOf('forge tavern')>-1||
        p.indexOf('forge hot springs')>-1||p.indexOf('recording studio at the forge')>-1||
-       p.indexOf('in the village')>-1||p.indexOf('outside the lodge')>-1) return 'grounds';
+       p.indexOf('in the village')>-1||p.indexOf('outside the lodge')>-1||p.indexOf('stage at the forge')>-1) return 'grounds';
     return 'away';
   }
   function relation(p, mine){
@@ -1208,6 +1322,7 @@
     'the CEO office at HQ':               {img:['room-office.jpg']},
     'the security office at HQ':          {img:['room-security.jpg'], pos:'40% center'},
     'the Forge rooftop, atop the stage':  {img:['room-rooftop.jpg','room-forge.jpg'], pos:'center 40%', out:true},
+    'the stage at the Forge':             {img:['room-stage.jpg','room-rooftop.jpg'], pos:'center 55%', out:true},
     'the Forge tavern in the Village':    {img:['room-tavern.jpg','room-square.jpg'], out:true},
     'the coffee shop in the Village':     {img:['room-coffee.jpg']},
     'the square in the Village':          {img:['room-square.jpg'], pos:'center 70%', out:true},
@@ -1490,6 +1605,7 @@
   }
   function applyExtras(data){
     if(!data) return;
+    handleNotes(data);
     if(data.energy && typeof data.energy.level==='number'){
       ember=data.energy; emberAt=Date.now();
       try{ localStorage.setItem(EMBER_KEY, JSON.stringify({e:ember, at:emberAt})); }catch(e){}
@@ -1523,7 +1639,7 @@
   ];
   var GROUNDS=[
     {g:'HQ', cells:[{p:'the conference room at HQ',n:'Conference room'},{p:'the CEO office at HQ',n:'CEO office'},{p:'the security office at HQ',n:'Security office'}]},
-    {g:'The stage', cells:[{p:'the Forge rooftop, atop the stage',n:'Rooftop'},{p:'the recording studio at the Forge',n:'Studio'}]},
+    {g:'The stage', cells:[{p:'the stage at the Forge',n:'Stage'},{p:'the Forge rooftop, atop the stage',n:'Rooftop'},{p:'the recording studio at the Forge',n:'Studio'}]},
     {g:'The Village', cells:[{p:'the Forge tavern in the Village',n:'Tavern'},{p:'the coffee shop in the Village',n:'Coffee shop'},{p:'the square in the Village',n:'Square'}]},
     {g:'In the woods', cells:[{p:'the Forge hot springs',n:'Hot springs'}]}
   ];
@@ -1648,7 +1764,7 @@
     me={place:place, tz:TZ_FORGE};
     syncMySel(); savePlaces(); renderCallNote(); setScene(me.place); schedulePeek(); renderMap();
   }
-  function openMap(){ mapOpen=true; mapSel=null; document.getElementById('mapwrap').hidden=false; renderMap(); }
+  function openMap(){ mapOpen=true; mapSel=null; document.getElementById('mapwrap').hidden=false; renderMap(); loadTimeline(); }
   function closeMap(){ mapOpen=false; mapSel=null; document.getElementById('mapwrap').hidden=true; }
   document.getElementById('btnMap').addEventListener('click', function(){ if(mapOpen) closeMap(); else openMap(); });
   document.getElementById('mapClose').addEventListener('click', closeMap);
@@ -1688,6 +1804,211 @@
     window.addEventListener('resize', function(){ if(rt) clearTimeout(rt); rt=setTimeout(applyWeatherFx, 250); });
     document.addEventListener('visibilitychange', function(){ if(!document.hidden){ fx.last=0; fxStart(); if(!lockShown) peekRoom({}); } });
   }
+
+  /* =====================================================================
+     NOTES: what they left him while he was away
+     ===================================================================== */
+  var NOTE_WHERE = { fridge: 'on the fridge', pillow: 'on your pillow', desk: 'on your desk', text: 'a text' };
+  var notesBusy = false, notesOpen = false, notesShowing = [];
+  function opCall(op, extra){
+    var body = Object.assign({ op: op }, extra || {});
+    return fetch(ENDPOINT, { method:'POST', cache:'no-store', headers:hdrs(), body: JSON.stringify(body) })
+      .then(function(res){
+        if(res.status===401){ showLock(badKey()); throw new Error('locked'); }
+        if(!res.ok) throw new Error('op '+res.status);
+        return res.json();
+      });
+  }
+  function handleNotes(data){
+    if(!data) return;
+    if(data.notesDue && !notesBusy){ fetchNotes(); return; }
+    var fresh = (data.notes || []).filter(function(n){ return notesShowing.indexOf(n.id) === -1; });
+    if(fresh.length && !notesOpen) showNotes(data.notes, false);
+  }
+  function fetchNotes(){
+    notesBusy = true; toast('Someone left you something…', true);
+    opCall('notes').then(function(d){
+      notesBusy = false; toast('');
+      if(d && d.notes && d.notes.length) showNotes(d.notes, false);
+    }).catch(function(){ notesBusy = false; toast(''); });
+  }
+  function toast(msg, pulse){
+    var t = document.getElementById('toast');
+    if(!msg){ t.hidden = true; return; }
+    t.textContent = msg; t.classList.toggle('pulse', !!pulse); t.hidden = false;
+  }
+  function showNotes(list, history){
+    var wrap = document.getElementById('noteswrap'), box = document.getElementById('notescards');
+    document.getElementById('notestitle').textContent = history ? 'Notes' : 'While you were away';
+    box.innerHTML = '';
+    if(!list.length){
+      var e = document.createElement('div'); e.className = 'noteempty'; e.textContent = 'Nothing yet. They write when you have been gone a while.';
+      box.appendChild(e);
+    }
+    list.forEach(function(n, i){
+      var c = document.createElement('div');
+      c.className = 'note n-' + n.who + ' m-' + n.medium + (n.read && history ? ' read' : '');
+      c.style.setProperty('--tilt', ((i % 2 ? 1 : -1) * (0.6 + (i % 3) * 0.5)) + 'deg');
+      var h = document.createElement('div'); h.className = 'nh';
+      h.textContent = (STATE_LABEL[n.who] || n.who) + ' · ' + (NOTE_WHERE[n.medium] || n.medium) + (n.time ? ' · ' + n.time : '');
+      var t = document.createElement('div'); t.className = 'nt'; t.textContent = n.text;
+      c.appendChild(h); c.appendChild(t); box.appendChild(c);
+    });
+    notesShowing = list.map(function(n){ return n.id; });
+    notesOpen = true; wrap.hidden = false;
+  }
+  function closeNotes(){
+    var unread = notesShowing.slice();
+    notesOpen = false; document.getElementById('noteswrap').hidden = true;
+    if(unread.length) opCall('notesRead', { ids: unread }).catch(function(){});
+  }
+  document.getElementById('notesClose').addEventListener('click', closeNotes);
+  document.getElementById('noteswrap').addEventListener('click', function(e){ if(e.target === this) closeNotes(); });
+  document.getElementById('btnNotes').addEventListener('click', function(){
+    opCall('notesList').then(function(d){ showNotes((d && d.notes) || [], true); }).catch(function(){});
+  });
+
+  /* =====================================================================
+     TODAY AT THE FORGE: everyone's day as a timeline, under the map
+     ===================================================================== */
+  var TL_KIND = [
+    [/asleep/i, 'sleep'],
+    [/at hq/i, 'hq'],
+    [/recording studio|stage at the forge|rooftop/i, 'music'],
+    [/in the village/i, 'village'],
+    [/hot springs/i, 'springs'],
+    [/outside the lodge|^the forge$/i, 'grounds'],
+    [/in the lodge/i, 'lodge']
+  ];
+  function tlKind(b){
+    if(/asleep/i.test(b.doing)) return 'sleep';
+    for(var i=1;i<TL_KIND.length;i++){ if(TL_KIND[i][0].test(b.where)) return TL_KIND[i][1]; }
+    return 'away';
+  }
+  function hm(x){ var h=Math.floor(x), m=Math.round((x-h)*60); if(m===60){h++;m=0;} return (h<10?'0':'')+h+':'+(m<10?'0':'')+m; }
+  function loadTimeline(){
+    var box = document.getElementById('timeline'); if(!box) return;
+    opCall('timeline').then(function(d){
+      var T = d && d.timeline; if(!T) return;
+      box.innerHTML = '';
+      var head = document.createElement('div'); head.className = 'mlabel'; head.textContent = 'Today at the Forge · ' + T.weekday; box.appendChild(head);
+      var scale = document.createElement('div'); scale.className = 'tlscale';
+      [0,6,12,18,24].forEach(function(h){ var s=document.createElement('span'); s.style.left=(h/24*100)+'%'; s.textContent=(h<10?'0':'')+h+':00'; scale.appendChild(s); });
+      ['selene','nysera','mirael','talia','sera'].forEach(function(w){
+        var row = document.createElement('div'); row.className = 'tlrow';
+        var nm = document.createElement('div'); nm.className = 'tlname st-' + w; nm.innerHTML = '<span class="n">' + STATE_LABEL[w] + '</span>'; row.appendChild(nm);
+        var bar = document.createElement('div'); bar.className = 'tlbar';
+        (T.people[w] || []).forEach(function(b){
+          var seg = document.createElement('div'); seg.className = 'tlseg k-' + tlKind(b);
+          seg.style.left = (b.from/24*100) + '%'; seg.style.width = ((b.to-b.from)/24*100) + '%';
+          seg.title = hm(b.from) + ' to ' + hm(b.to) + ' · ' + b.doing + ' · ' + shortLabel(b.where);
+          bar.appendChild(seg);
+        });
+        var nowl = document.createElement('div'); nowl.className = 'tlnow'; nowl.style.left = (T.now/24*100) + '%'; bar.appendChild(nowl);
+        row.appendChild(bar); box.appendChild(row);
+      });
+      var sc = document.createElement('div'); sc.className = 'tlrow'; sc.appendChild(document.createElement('div')); sc.appendChild(scale); box.appendChild(sc);
+      var lg = document.createElement('div'); lg.className = 'tllegend';
+      [['lodge','the lodge'],['sleep','asleep'],['hq','HQ'],['music','studio and stage'],['village','the Village'],['springs','hot springs'],['grounds','out on the grounds'],['away','away']].forEach(function(x){
+        var s=document.createElement('span'); s.innerHTML='<i class="k-'+x[0]+'"></i>'+x[1]; lg.appendChild(s);
+      });
+      box.appendChild(lg);
+    }).catch(function(){});
+  }
+
+  /* =====================================================================
+     SETTINGS: the calendar, rehearsal nights, notes and the ember
+     ===================================================================== */
+  var setData = null;
+  var KIND_LABEL = { concert:'Concert', video:'Video build', tour:'Tour', shoot:'Shoot', other:'Other' };
+  var DAY_LABEL = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  function placeOptions(sel, value){
+    sel.innerHTML = '';
+    var opt = function(v, l){ var o=document.createElement('option'); o.value=v; o.textContent=l; sel.appendChild(o); };
+    opt('', 'Default for the kind');
+    PLACES.forEach(function(p){ if(p.v!=='__custom__' && p.v!=='the fold') opt(p.v, p.label); });
+    CITIES.forEach(function(c){ opt(c.v, c.v); });
+    if(value) sel.value = value;
+  }
+  function openSettings(){
+    document.getElementById('setwrap').hidden = false;
+    document.getElementById('setmsg').textContent = 'Loading…';
+    opCall('settings').then(function(d){ setData = d.settings; renderSettings(); document.getElementById('setmsg').textContent=''; })
+      .catch(function(){ document.getElementById('setmsg').textContent = 'Could not load the settings.'; });
+  }
+  function closeSettings(){ document.getElementById('setwrap').hidden = true; }
+  function renderSettings(){
+    var S = setData;
+    var ev = document.getElementById('evlist'); ev.innerHTML = '';
+    if(!S.events.length){ var n=document.createElement('div'); n.className='evnone'; n.textContent='Nothing on the calendar.'; ev.appendChild(n); }
+    S.events.forEach(function(e, i){
+      var r = document.createElement('div'); r.className = 'evrow';
+      var d = e.startDate + (e.endDate !== e.startDate ? ' to ' + e.endDate : '');
+      r.innerHTML = '<div><b></b><span class="evk"></span><div class="evd"></div></div>';
+      r.querySelector('b').textContent = e.title;
+      r.querySelector('.evk').textContent = KIND_LABEL[e.kind] || e.kind;
+      r.querySelector('.evd').textContent = d + ', ' + e.from + ' to ' + e.to + ', ' + shortLabel(e.place);
+      var x = document.createElement('button'); x.className = 'tool'; x.textContent = 'Remove';
+      x.addEventListener('click', function(){ S.events.splice(i,1); renderSettings(); });
+      r.appendChild(x); ev.appendChild(r);
+    });
+    var days = document.getElementById('rhdays'); days.innerHTML = '';
+    [1,2,3,4,5,6,0].forEach(function(d){
+      var l = document.createElement('label'); l.className = 'chk';
+      var c = document.createElement('input'); c.type = 'checkbox'; c.checked = S.rehearsal.days.indexOf(d) !== -1;
+      c.addEventListener('change', function(){
+        var a = S.rehearsal.days.filter(function(x){ return x !== d; }); if(c.checked) a.push(d); S.rehearsal.days = a;
+      });
+      l.appendChild(c); l.appendChild(document.createTextNode(DAY_LABEL[d])); days.appendChild(l);
+    });
+    document.getElementById('rhfrom').value = S.rehearsal.from;
+    document.getElementById('rhto').value = S.rehearsal.to;
+    document.getElementById('nton').checked = S.notes.on;
+    document.getElementById('nthours').value = S.notes.minAwayHours;
+    document.getElementById('emalone').value = S.ember.aloneHours;
+    document.getElementById('emrest').value = S.ember.restHours;
+    document.getElementById('hold').value = S.holdHours;
+    placeOptions(document.getElementById('evplace'), '');
+  }
+  document.getElementById('evadd').addEventListener('click', function(){
+    var t = document.getElementById('evtitle').value.trim();
+    var sd = document.getElementById('evstart').value;
+    if(!t || !sd){ document.getElementById('setmsg').textContent = 'An event needs a name and a start date.'; return; }
+    setData.events.push({
+      title: t, kind: document.getElementById('evkind').value, startDate: sd,
+      endDate: document.getElementById('evend').value || sd,
+      from: document.getElementById('evfrom').value || '', to: document.getElementById('evto').value || '',
+      place: document.getElementById('evplace').value || ''
+    });
+    ['evtitle','evstart','evend','evfrom','evto'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('setmsg').textContent = 'Added. Save to keep it.';
+    renderSettings();
+  });
+  document.getElementById('setsave').addEventListener('click', function(){
+    var S = setData; if(!S) return;
+    S.rehearsal.from = document.getElementById('rhfrom').value || S.rehearsal.from;
+    S.rehearsal.to = document.getElementById('rhto').value || S.rehearsal.to;
+    S.notes.on = document.getElementById('nton').checked;
+    S.notes.minAwayHours = Number(document.getElementById('nthours').value) || S.notes.minAwayHours;
+    S.ember.aloneHours = Number(document.getElementById('emalone').value) || S.ember.aloneHours;
+    S.ember.restHours = Number(document.getElementById('emrest').value) || S.ember.restHours;
+    S.holdHours = Number(document.getElementById('hold').value) || S.holdHours;
+    document.getElementById('setmsg').textContent = 'Saving…';
+    opCall('settingsSave', { settings: S }).then(function(d){
+      setData = d.settings; renderSettings();
+      document.getElementById('setmsg').textContent = 'Saved.';
+      peekRoom({});
+    }).catch(function(){ document.getElementById('setmsg').textContent = 'Could not save.'; });
+  });
+  document.getElementById('btnSettings').addEventListener('click', openSettings);
+  document.getElementById('setClose').addEventListener('click', closeSettings);
+  document.getElementById('setwrap').addEventListener('click', function(e){ if(e.target === this) closeSettings(); });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key!=='Escape') return;
+    if(!document.getElementById('setwrap').hidden) closeSettings();
+    else if(notesOpen) closeNotes();
+  });
 
   document.getElementById('btnRemember').addEventListener('click', async function(){
     if(!history.length) return;
