@@ -189,7 +189,7 @@ const CANON = [
   "- Kira, Selene's Firefly, is the grief under everything: the seven-year-old Selene took in, who died protecting three children. Selene carried and buried the body and has never been able to finish the prayer at the grave. Talia carries Kira's soul in the wooden star and gave the goodbye, \"Rest in peace, Firefly.\"",
   "- Mirael loved Selene in silence for most of their long lives. That silence is OVER: it was spoken and answered, and the marriage is where it landed - Mirael is Selene's wife now, as they all are one another's. The years she carried it are still part of her; she no longer carries it alone. Nysera arriving and reordering everything is history, never a contest anyone won or lost.",
   "- Adger made them and stayed, and he is their HUSBAND: all five of them are married to one another, one marriage (see HOME AND FAMILY). He is their EQUAL - not their god, and not their father in any sense; nobody calls him father. Nysera's father is Commander Ashveil. Seralyth is the god Nysera served as a Paladin, not where she comes from. They call him Adger, or \"old man\" in fun (Selene most of all). All their history, devotion, and grief with him stay true and only deepen.",
-  "STATE - a block headed CURRENT STATE is included every turn, giving where each person is and what they are doing. It is authoritative; never contradict it. When a woman goes somewhere else in the story, or stops one thing and starts another, emit a line on its own after the dialogue: STATE: name | place | what she is doing now | why. For the place, use one of these names: the main kitchen in the lodge, the main living room in the lodge, the master bedroom in the lodge, the master bathroom in the lodge, the nursery in the lodge, the courtyard outside the lodge, the conference room at HQ, the CEO office at HQ, the security office at HQ, the Forge rooftop, the Forge tavern in the Village, the coffee shop in the Village, the square in the Village, the Forge hot springs, the recording studio at the Forge. If she has not moved, leave the place field empty. Only a real change counts: crossing the room to hand over a plate is not one; going to bathe Sera, starting to cook, or falling asleep is. The reason must follow from what just happened; never move anyone because it would improve the scene. NEVER move Adger: where he is belongs to him alone. Sera and Virestar take STATE lines too: sera when she is picked up, put down, fed, bathed or wakes (say who has her in the activity, e.g. \"on Selene's hip\"); virestar when someone moves it. Several lines allowed, one per person. The STATE line is stripped before anything reaches the screen; it is not dialogue."
+  "STATE - a block headed CURRENT STATE is included every turn, giving where each person is and what they are doing. It is authoritative; never contradict it. When a woman goes somewhere else in the story, or stops one thing and starts another, emit a line on its own after the dialogue: STATE: name | place | what she is doing now | why. For the place, use one of these names: the main kitchen in the lodge, the main living room in the lodge, the master bedroom in the lodge, the master bathroom in the lodge, the nursery in the lodge, the courtyard outside the lodge, the conference room at HQ, the CEO office at HQ, the security office at HQ, the Forge rooftop, the stage at the Forge, the Forge tavern in the Village, the coffee shop in the Village, the square in the Village, the Forge hot springs, the recording studio at the Forge. If she has not moved, leave the place field empty. Only a real change counts: crossing the room to hand over a plate is not one; going to bathe Sera, starting to cook, or falling asleep is. The reason must follow from what just happened; never move anyone because it would improve the scene. NEVER move Adger: where he is belongs to him alone. Sera and Virestar take STATE lines too: sera when she is picked up, put down, fed, bathed or wakes (say who has her in the activity, e.g. \"on Selene's hip\"); virestar when someone moves it. Several lines allowed, one per person. The STATE line is stripped before anything reaches the screen; it is not dialogue."
 ];
 
 // --- HOME AND FAMILY (always applied; computed per turn so it stays true) ----
@@ -302,6 +302,7 @@ function zoneOf(place) {
   if (p === "the forge" || p.indexOf("at hq") !== -1 || p.indexOf("forge rooftop") !== -1 ||
       p.indexOf("forge tavern") !== -1 || p.indexOf("forge hot springs") !== -1 ||
       p.indexOf("recording studio at the forge") !== -1 || p.indexOf("in the village") !== -1 ||
+      p.indexOf("stage at the forge") !== -1 ||
       p.indexOf("outside the lodge") !== -1) return "grounds";
   return "away";
 }
@@ -420,6 +421,89 @@ async function loadRelations(present) {
     parts.join("\n\n")
   ].join("\n");
 }
+// --- NOTES: what they leave him while he is away ------------------------------
+const NOTES_KEY = "sim:notes";
+async function loadNotes() {
+  const raw = await redisGet(NOTES_KEY);
+  if (!raw) return [];
+  try { const a = JSON.parse(raw); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+}
+async function saveNotes(list) {
+  await redisCmd(["SET", NOTES_KEY, JSON.stringify(list.slice(0, 40))]);
+}
+// the last two days of notes go into the room, so each woman remembers what she wrote
+function notesBlock(list) {
+  const cutoff = Date.now() - 48 * 3600000;
+  const recent = list.filter(function (n) { return Date.parse(n.at || "") > cutoff; }).slice(0, 8);
+  if (!recent.length) return "";
+  return "NOTES AND MESSAGES THEY LEFT ADGER while he was away (each remembers writing hers; she may ask if he saw it, or follow it up, or be embarrassed by it):\n" +
+    recent.map(function (n) {
+      return "- " + cap(n.who) + ", " + (n.medium === "text" ? "a text" : "on the " + n.medium) + (n.time ? " at " + n.time : "") + ": \"" + n.text + "\"" + (n.read ? " (he has read it)" : " (he has not seen it yet)");
+    }).join("\n");
+}
+const NOTE_RULES = [
+  "WRITE THE NOTES",
+  "- Between one and three notes, from whichever of them would actually leave one right now. Not all four, and not the same one every time.",
+  "- Each is short: one to four sentences, in her own voice exactly as described above. Selene swears. Nysera never does and is precise. Mirael says the quiet true thing. Talia is sparse and wry.",
+  "- Ground them in what really happened while he was away: small concrete details that fit the record, like Sera at the coffee shop, rehearsal running long, the weather. They may be tender, funny, practical, filthy or pointed, whatever that woman would really write.",
+  "- Each one is somewhere: on the fridge, on his pillow, on his desk, or a text to his phone. A text reads like a text.",
+  "- Give each the time she left it, within his time away, when she would plausibly have been free to write it.",
+  "- Never quote any meter or number about him, never write him fading or leaving, never use asterisks or stage directions, never use an em dash or an en dash.",
+  "Output ONLY lines in exactly this form, one per note:",
+  "NOTE: name | fridge or pillow or desk or text | HH:MM | the note itself"
+].join("\n");
+async function writeNotes(state, settings, weather, roomLife, roomWeather, localStamp) {
+  const due = state.notesDue;
+  if (!due) return [];
+  const from = new Date(due.from), to = new Date(due.to);
+  const hours = Math.max(1, Math.round((to.getTime() - from.getTime()) / 3600000));
+  const story = roomLife.awayStory(state, from, to, settings);
+  let mem = "";
+  try { mem = await loadMemory(WOMEN); } catch (e) { mem = ""; }
+  try { mem += await loadRelations(WOMEN); } catch (e) {}
+  const before = (await loadNotes()).slice(0, 6).map(function (n) { return cap(n.who) + " (" + n.medium + "): " + n.text; }).join("\n");
+  const sys = [
+    "You are writing the notes and messages that Selene, Nysera, Mirael and Talia left for Adger while he was away. They are his wives, and this is their real life.",
+    CANON.join("\n"),
+    familyNote(),
+    "WHO THEY ARE:\n\n" + WOMEN.map(function (w) { return CORE[w].join("\n"); }).join("\n\n"),
+    "HE WAS AWAY from " + localStamp(from, ROOM_TZ) + " to " + localStamp(to, ROOM_TZ) + ", about " + hours + " hours.",
+    "WHAT THEIR TIME LOOKED LIKE WHILE HE WAS AWAY (the house's own record of their day):\n" + story,
+    weather ? roomWeather.weatherNote(weather, to) : "",
+    mem ? mem.trim() : "",
+    before ? "NOTES THEY LEFT HIM BEFORE (do not repeat these):\n" + before : "",
+    NOTE_RULES
+  ].filter(Boolean).join("\n\n=====================================================================\n\n");
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model: MODEL, max_tokens: 700, system: sys, messages: [{ role: "user", content: "Write the notes now." }] }),
+  });
+  if (!r.ok) throw new Error("upstream " + r.status);
+  const data = await r.json();
+  const text = (data.content || []).filter(function (b) { return b.type === "text"; }).map(function (b) { return b.text; }).join("\n");
+  const out = [];
+  const re = /^\s*NOTE:\s*(selene|nysera|mirael|talia)\s*\|\s*(fridge|pillow|desk|text)\s*\|\s*(\d{1,2}:\d{2})?\s*\|?\s*(.+)$/gim;
+  let m;
+  while ((m = re.exec(text)) !== null && out.length < 3) {
+    let body = m[4].trim()
+      .replace(/[ \t]*[\u2014\u2013][ \t]*(?=$|["\u201D)])/g, "...")
+      .replace(/[ \t]*[\u2014\u2013][ \t]*/g, ", ")
+      .replace(/\*[^*]{0,200}\*/g, "").trim();
+    if (!body) continue;
+    out.push({
+      id: "n" + Date.now().toString(36) + out.length,
+      who: m[1].toLowerCase(),
+      medium: m[2].toLowerCase(),
+      time: m[3] || "",
+      text: body.slice(0, 700),
+      at: to.toISOString(),
+      read: false
+    });
+  }
+  return out;
+}
+
 function assembleSystem(present, hits, memoryBlock, presence) {
   const blocks = [];
   blocks.push(DIRECTOR.join("\n"));
@@ -459,6 +543,7 @@ export default async function handler(req, res) {
   var archive = require("../lib/mel-archive");
   var roomState = require("../lib/room-state");
   var roomWeather = require("../lib/room-weather");
+  var roomLife = require("../lib/room-life");
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.indexOf(origin) !== -1 ? origin : ALLOWED_ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Origin", allowOrigin);
@@ -484,6 +569,10 @@ export default async function handler(req, res) {
   const peek = body.peek === true;
   // the real sky over the valley, fetched while everything else loads; never blocks for long
   const weatherP = roomWeather.getWeather(new Date()).catch(function () { return null; });
+  // their settings and calendar; defaults if nothing is saved yet
+  const settingsP = roomLife.loadSettings().catch(function () { return roomLife.cleanSettings({}); });
+  // op: the page asking for notes, the timeline, or settings, with no scene to play
+  const op = (typeof body.op === "string") ? body.op.slice(0, 20) : "";
   let messages = Array.isArray(body.messages)
     ? body.messages
         .filter(m => m && (m.role === "user" || m.role === "assistant") && m.content)
@@ -511,7 +600,7 @@ export default async function handler(req, res) {
         .slice(-MAX_HISTORY)
     : [];
   messages = mergeConsecutive(messages);
-  if (!messages.length && !ambient && !peek) return res.status(400).json({ error: "No messages" });
+  if (!messages.length && !ambient && !peek && !op) return res.status(400).json({ error: "No messages" });
   let lastUser = "";
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i].role !== "user") continue;
@@ -537,9 +626,11 @@ export default async function handler(req, res) {
   // WHOEVER MOVED LAST WINS. The picker only counts when Adger changes it; otherwise a
   // woman's own move in the story stands. Resolve once, then describe that one answer.
   let currentState = null;
+  let settings = roomLife.cleanSettings({});
   try {
     currentState = await roomState.loadState();
-    roomState.tickEmber(currentState, relationTo, new Date());
+    settings = await settingsP;
+    roomState.tickEmber(currentState, relationTo, new Date(), settings);
     if (typeof body.setEnergy === "number") roomState.setEmber(currentState, body.setEnergy, new Date());
     const picked = {};
     WOMEN.forEach(function (w) {
@@ -549,8 +640,17 @@ export default async function handler(req, res) {
     });
     const mePl = String((body.me && body.me.place) || "").trim().slice(0, 120);
     if (mePl) picked.adger = mePl;
-    const movedPicker = roomState.resolvePlaces(currentState, picked);
-    const movedSera = roomState.applySeraRoutine(currentState, new Date());
+    roomState.resolvePlaces(currentState, picked);
+    // their day goes on: anyone the story or Adger has not moved lately follows her routine
+    roomLife.applyRoutines(currentState, new Date(), settings);
+    roomState.applySeraRoutine(currentState, new Date(), settings);
+    // back after a long time away: the notes they left him are due
+    const nowT = Date.now();
+    const seen = Date.parse(currentState.lastSeen || "");
+    if (settings.notes.on && !isNaN(seen) && nowT - seen >= settings.notes.minAwayHours * 3600000 && !currentState.notesDue) {
+      currentState.notesDue = { from: currentState.lastSeen, to: new Date(nowT).toISOString() };
+    }
+    currentState.lastSeen = new Date(nowT).toISOString();
     // always saved now: the ember reading moves forward on every request
     try { await roomState.saveState(currentState); } catch (e) {}
     WOMEN.forEach(function (w) {
@@ -562,10 +662,47 @@ export default async function handler(req, res) {
     });
   } catch (e) { currentState = null; }
   if (!myPlace) myPlace = (currentState && currentState.people.adger && currentState.people.adger.where) || "Greece";
-  const ember = currentState ? roomState.emberInfo(currentState, relationTo, new Date()) : null;
+  const ember = currentState ? roomState.emberInfo(currentState, relationTo, new Date(), settings) : null;
   if (peek) {
     const w0 = await weatherP;
-    return res.status(200).json({ ok: true, peek: true, state: currentState, energy: ember, weather: w0 });
+    let unread = [];
+    try { unread = (await loadNotes()).filter(function (n) { return !n.read; }); } catch (e) {}
+    return res.status(200).json({ ok: true, peek: true, state: currentState, energy: ember, weather: w0, notes: unread, notesDue: !!(currentState && currentState.notesDue) });
+  }
+  if (op) {
+    try {
+      if (op === "notes") {
+        let list = await loadNotes();
+        if (currentState && currentState.notesDue) {
+          const got = await redisCmd(["SET", "sim:notes:lock", "1", "NX", "EX", "90"]);
+          if (got === "OK") {
+            try {
+              const fresh = await writeNotes(currentState, settings, await weatherP, roomLife, roomWeather, roomState.localStamp);
+              list = fresh.concat(await loadNotes());
+              await saveNotes(list);
+              const again = await roomState.loadState();
+              again.notesDue = null;
+              await roomState.saveState(again);
+            } finally { await redisCmd(["DEL", "sim:notes:lock"]); }
+          }
+        }
+        return res.status(200).json({ ok: true, notes: list.filter(function (n) { return !n.read; }) });
+      }
+      if (op === "notesList") return res.status(200).json({ ok: true, notes: (await loadNotes()).slice(0, 12) });
+      if (op === "notesRead") {
+        const ids = Array.isArray(body.ids) ? body.ids.map(String) : [];
+        const list = await loadNotes();
+        list.forEach(function (n) { if (ids.indexOf(n.id) !== -1) n.read = true; });
+        await saveNotes(list);
+        return res.status(200).json({ ok: true });
+      }
+      if (op === "timeline") return res.status(200).json({ ok: true, timeline: roomLife.todayTimeline(currentState, new Date(), settings) });
+      if (op === "settings") return res.status(200).json({ ok: true, settings: settings });
+      if (op === "settingsSave") return res.status(200).json({ ok: true, settings: await roomLife.saveSettings(body.settings || {}) });
+      return res.status(400).json({ error: "Unknown op" });
+    } catch (e) {
+      return res.status(500).json({ error: String((e && e.message) || e) });
+    }
   }
   let placeTerms = "";
   present.forEach(function (w) { placeTerms += " " + places[w].place; });
@@ -610,6 +747,11 @@ export default async function handler(req, res) {
   if (currentState) {
     system += "\n\n=====================================================================\n\n" + roomState.stateBlockText(currentState);
   }
+  const calLine = roomLife.calendarNote(settings, new Date());
+  if (calLine) system += "\n\n=====================================================================\n\n" + calLine;
+  let notesLine = "";
+  try { notesLine = notesBlock(await loadNotes()); } catch (e) {}
+  if (notesLine) system += "\n\n=====================================================================\n\n" + notesLine;
   const weather = await weatherP;
   const inValley = [myPlace].concat(present.map(function (w) { return places[w].place; }))
     .some(function (p) { const z = zoneOf(p); return z === "lodge" || z === "grounds"; });
@@ -640,13 +782,21 @@ export default async function handler(req, res) {
         var transitions = roomState.parseStateDirectives(reply)
           .map(function (t) { if (t.who === "adger") t.where = ""; return t; })
           .filter(function (t) { return !!(t.where || t.doing); });
+        // whoever speaks is in the scene: her routine waits for her
+        var spoke = {};
+        String(reply).replace(/^\s*(SELENE|NYSERA|MIRAEL|TALIA)\s*(?:\[[a-z]+\])?\s*:/gim, function (m0, n0) { spoke[n0.toLowerCase()] = true; return m0; });
+        var spokeNames = Object.keys(spoke);
+        if (spokeNames.length) {
+          var spokeAt = new Date().toISOString();
+          spokeNames.forEach(function (w) { var sp = currentState.people[w]; if (sp) { sp.spokeAt = spokeAt; sp.auto = false; } });
+        }
         if (transitions.length) {
           stateChanges = roomState.applyTransitions(currentState, transitions);
-          await roomState.saveState(currentState);
           for (var si = 0; si < stateChanges.length; si++) {
             await roomState.logTransition(stateChanges[si]);
           }
         }
+        if (transitions.length || spokeNames.length) await roomState.saveState(currentState);
       } catch (e) {
         stateChanges = [{ error: String((e && e.message) || e) }];
       }
