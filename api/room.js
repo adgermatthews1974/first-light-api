@@ -504,6 +504,62 @@ async function writeNotes(state, settings, weather, roomLife, roomWeather, local
   return out;
 }
 
+// --- TEXTS: one of them reaches out to his phone, right now -------------------
+const TEXT_RULES = [
+  "WRITE THE TEXT",
+  "- One text message from her to Adger's phone, right now, from where she is and what she is doing. One to three short sentences, the way she actually texts: Selene swears and does not bother with capitals; Nysera writes in full, careful sentences and never swears; Mirael is warm and direct; Talia is sparse and dry.",
+  "- Have a real reason, the kind people text for: something Sera just did, something that happened, a question, missing him, a tease, logistics, a follow-up if he has not answered the last one. Ground it in the record of her day. Small, specific, alive.",
+  "- If he has not read what was sent before, she knows he has not; she may nudge, or let it be.",
+  "- Never quote any meter or number about him, never write him fading or leaving, never use asterisks or stage directions, never use an em dash or an en dash.",
+  "- If there is truly nothing she would send right now, output only: NONE",
+  "Otherwise output ONLY one line in exactly this form:",
+  "TEXT: the message itself"
+].join("\n");
+async function writeText(state, settings, who, weather, roomLife, roomWeather, localStamp, extra) {
+  const now = new Date();
+  const p = state.people[who] || {};
+  const since = state.lastSeen ? new Date(state.lastSeen) : new Date(now.getTime() - 6 * 3600000);
+  const story = roomLife.awayStory(state, since, now, settings);
+  const board = WOMEN.concat(["sera"]).map(function (w) {
+    const x = state.people[w] || {};
+    return cap(w) + ": " + (x.where || "somewhere") + ", " + (x.doing || "");
+  }).join("\n");
+  let mem = "";
+  try { mem = await loadMemory([who]); } catch (e) { mem = ""; }
+  try { mem += await loadRelations([who]); } catch (e) {}
+  const before = (await loadNotes()).slice(0, 10).map(function (n) {
+    return cap(n.who) + " (" + (n.medium === "text" ? "text" : n.medium) + ", " + (n.time || "") + (n.read ? ", he read it" : ", unread") + "): " + n.text;
+  }).join("\n");
+  const sys = [
+    "You are writing one text message that " + cap(who) + " sends to Adger's phone right now. She is his wife, and this is their real life.",
+    CANON.join("\n"),
+    familyNote(),
+    CORE[who].join("\n"),
+    "RIGHT NOW it is " + localStamp(now, ROOM_TZ) + ". " + cap(who) + " is at " + (p.where || "home") + ", " + (p.doing || "") + ". Adger is away from them, at " + ((state.people.adger || {}).where || "somewhere else") + ".",
+    "WHERE EVERYONE IS:\n" + board,
+    "WHAT THEIR TIME HAS LOOKED LIKE SINCE HE WAS LAST WITH THEM (the house's own record):\n" + story,
+    weather ? roomWeather.weatherNote(weather, now) : "",
+    extra || "",
+    mem ? mem.trim() : "",
+    before ? "WHAT THEY HAVE ALREADY SENT OR LEFT HIM (do not repeat):\n" + before : "",
+    TEXT_RULES
+  ].filter(Boolean).join("\n\n=====================================================================\n\n");
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model: MODEL, max_tokens: 300, system: sys, messages: [{ role: "user", content: "Her text, now." }] }),
+  });
+  if (!r.ok) throw new Error("upstream " + r.status);
+  const data = await r.json();
+  const text = (data.content || []).filter(function (b) { return b.type === "text"; }).map(function (b) { return b.text; }).join("\n");
+  const m = text.match(/^\s*TEXT:\s*(.+)$/im);
+  if (!m) return "";
+  return m[1].trim()
+    .replace(/[ \t]*[\u2014\u2013][ \t]*(?=$|["\u201D)])/g, "...")
+    .replace(/[ \t]*[\u2014\u2013][ \t]*/g, ", ")
+    .replace(/\*[^*]{0,200}\*/g, "").trim().slice(0, 500);
+}
+
 function assembleSystem(present, hits, memoryBlock, presence) {
   const blocks = [];
   blocks.push(DIRECTOR.join("\n"));
@@ -544,6 +600,7 @@ export default async function handler(req, res) {
   var roomState = require("../lib/room-state");
   var roomWeather = require("../lib/room-weather");
   var roomLife = require("../lib/room-life");
+  var roomPush = require("../lib/room-push");
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.indexOf(origin) !== -1 ? origin : ALLOWED_ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Origin", allowOrigin);
@@ -555,7 +612,9 @@ export default async function handler(req, res) {
   // THE LOCK. Once ROOM_KEY is set in Vercel, only a page that knows the passphrase gets in.
   // Until it is set nothing changes, so this can go live before the passphrase exists.
   const roomKey = process.env.ROOM_KEY || "";
-  if (roomKey && String(req.headers["x-room-key"] || "") !== roomKey) return res.status(401).json({ error: "locked" });
+  // the phone waking to a notification asks what is new with its own device token, checked below
+  const inboxCall = !!(req.body && req.body.op === "pushInbox");
+  if (roomKey && !inboxCall && String(req.headers["x-room-key"] || "") !== roomKey) return res.status(401).json({ error: "locked" });
   const body = req.body || {};
   const lc = x => String(x).toLowerCase();
   const valid = x => WOMEN.indexOf(x) !== -1;
@@ -573,6 +632,39 @@ export default async function handler(req, res) {
   const settingsP = roomLife.loadSettings().catch(function () { return roomLife.cleanSettings({}); });
   // op: the page asking for notes, the timeline, or settings, with no scene to play
   const op = (typeof body.op === "string") ? body.op.slice(0, 20) : "";
+  if (op === "pushInbox") {
+    try {
+      const dev = await roomPush.subByToken(String(body.token || ""));
+      if (!dev) return res.status(401).json({ error: "unknown device" });
+      const out = [];
+      const t = await redisGet("sim:push:test");
+      if (t) {
+        let test = null;
+        try { test = JSON.parse(t); } catch (e) {}
+        if (test && (test.notifiedBy || []).indexOf(dev.id) === -1) {
+          out.push({ title: "The Room", body: test.text, tag: "room-test", ts: Date.parse(test.at) || Date.now() });
+          test.notifiedBy = (test.notifiedBy || []).concat([dev.id]);
+          await redisCmd(["SET", "sim:push:test", JSON.stringify(test), "EX", "600"]);
+        }
+      }
+      const list = await loadNotes();
+      let changed = false;
+      list.forEach(function (n) {
+        if (out.length >= 3 || !n.pushed || n.read) return;
+        n.notifiedBy = n.notifiedBy || [];
+        if (n.notifiedBy.indexOf(dev.id) !== -1) return;
+        out.push({ title: cap(n.who), body: n.text, tag: "room-" + n.who, ts: Date.parse(n.at) || Date.now() });
+        n.notifiedBy.push(dev.id);
+        changed = true;
+      });
+      if (changed) await saveNotes(list);
+      return res.status(200).json({ messages: out });
+    } catch (e) {
+      return res.status(500).json({ error: "inbox" });
+    }
+  }
+  // the scheduled tick is the house, not Adger: it must not count as him being here
+  const machine = op === "tick";
   let messages = Array.isArray(body.messages)
     ? body.messages
         .filter(m => m && (m.role === "user" || m.role === "assistant") && m.content)
@@ -647,10 +739,10 @@ export default async function handler(req, res) {
     // back after a long time away: the notes they left him are due
     const nowT = Date.now();
     const seen = Date.parse(currentState.lastSeen || "");
-    if (settings.notes.on && !isNaN(seen) && nowT - seen >= settings.notes.minAwayHours * 3600000 && !currentState.notesDue) {
+    if (!machine && settings.notes.on && !isNaN(seen) && nowT - seen >= settings.notes.minAwayHours * 3600000 && !currentState.notesDue) {
       currentState.notesDue = { from: currentState.lastSeen, to: new Date(nowT).toISOString() };
     }
-    currentState.lastSeen = new Date(nowT).toISOString();
+    if (!machine) currentState.lastSeen = new Date(nowT).toISOString();
     // always saved now: the ember reading moves forward on every request
     try { await roomState.saveState(currentState); } catch (e) {}
     WOMEN.forEach(function (w) {
@@ -697,6 +789,63 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
       if (op === "timeline") return res.status(200).json({ ok: true, timeline: roomLife.todayTimeline(currentState, new Date(), settings) });
+      if (op === "pushKey") return res.status(200).json({ ok: true, publicKey: (await roomPush.vapid()).publicKey });
+      if (op === "pushSubscribe") {
+        const rec = await roomPush.subscribe(body.subscription, body.label);
+        return res.status(200).json({ ok: true, token: rec.token, id: rec.id });
+      }
+      if (op === "pushUnsubscribe") return res.status(200).json({ ok: true, removed: await roomPush.unsubscribe(String(body.token || "")) });
+      if (op === "pushStatus") {
+        const subs = await roomPush.loadSubs();
+        return res.status(200).json({ ok: true, devices: subs.map(function (d) { return { label: d.label, at: d.at }; }) });
+      }
+      if (op === "pushTest") {
+        await roomPush.setTest("This is how they will reach you.");
+        return res.status(200).json({ ok: true, delivery: await roomPush.broadcast() });
+      }
+      if (op === "tick") {
+        // Called every 15 minutes by the GitHub schedule, and by the page's "text me now".
+        // The answer never carries what was said: the schedule's logs are public.
+        const now = new Date();
+        const P = settings.push || {};
+        const force = body.force === true;
+        const say = function (why, sent) { return res.status(200).json({ ok: true, sent: !!sent, why: why }); };
+        if (P.on === false && !force) return say("off");
+        const subs = await roomPush.loadSubs();
+        if (!subs.length) return say("no devices");
+        if (!force && roomPush.quiet(settings, now)) return say("quiet hours");
+        const seenAt = Date.parse(currentState.lastSeen || "");
+        if (!force && !isNaN(seenAt) && now.getTime() - seenAt < 20 * 60000) return say("he is here");
+        const lastPush = Date.parse(currentState.lastPushAt || "");
+        const lastContact = Math.max(isNaN(seenAt) ? 0 : seenAt, isNaN(lastPush) ? 0 : lastPush);
+        const hours = lastContact ? (now.getTime() - lastContact) / 3600000 : 12;
+        const dayKey = roomLife.parts(now).key;
+        if (currentState.pushDay !== dayKey) { currentState.pushDay = dayKey; currentState.pushCount = 0; }
+        if (!force && currentState.pushCount >= 12) return say("enough for today");
+        let boost = 0;
+        if (roomLife.calendarNote(settings, now) && (settings.events || []).some(function (e) { return e.startDate <= roomLife.parts(new Date(now.getTime() + 86400000)).key && e.endDate >= dayKey; })) boost += 0.04;
+        if (currentState.energy && currentState.energy.level < 35 && !/the fold/i.test(((currentState.people.adger || {}).where) || "")) boost += 0.04;
+        const roll = Math.random();
+        if (!force && roll >= roomPush.chance(hours, P.pace, boost)) return say("not now");
+        const who = (typeof body.who === "string" && WOMEN.indexOf(body.who) !== -1) ? body.who
+          : roomPush.pickSender(currentState, roomLife.routineAt, settings, now, currentState.lastPushWho);
+        if (!who) return say("everyone is asleep");
+        const cal = roomLife.calendarNote(settings, now);
+        const emberLine2 = roomState.emberNote(currentState, relationTo, now);
+        const msg = await writeText(currentState, settings, who, await weatherP, roomLife, roomWeather, roomState.localStamp, [cal, emberLine2].filter(Boolean).join("\n\n"));
+        const again = await roomState.loadState();
+        again.lastPushAt = now.toISOString();
+        again.pushDay = dayKey;
+        again.pushCount = (again.pushDay === currentState.pushDay ? (currentState.pushCount || 0) : 0) + (msg ? 1 : 0);
+        if (msg) again.lastPushWho = who;
+        await roomState.saveState(again);
+        if (!msg) return say("she had nothing to say");
+        const list = await loadNotes();
+        list.unshift({ id: "t" + Date.now().toString(36), who: who, medium: "text", time: roomLife.parts(now).hhmm, text: msg, at: now.toISOString(), read: false, pushed: true, notifiedBy: [] });
+        await saveNotes(list);
+        await roomPush.broadcast();
+        return say("sent", true);
+      }
       if (op === "settings") return res.status(200).json({ ok: true, settings: settings });
       if (op === "settingsSave") return res.status(200).json({ ok: true, settings: await roomLife.saveSettings(body.settings || {}) });
       return res.status(400).json({ error: "Unknown op" });
