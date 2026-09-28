@@ -424,6 +424,55 @@
   label.chk{margin-right:10px}
   @media(max-width:760px){ .notescards{grid-template-columns:1fr} .note .nt{font-size:23px} .tllegend{margin-left:0} }
 
+
+  /* ===== MEMORY ===== */
+  .memwrap{position:absolute;inset:0;z-index:9;background:rgba(6,5,5,.9);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+    display:flex;justify-content:center;padding:20px 18px;overflow-y:auto}
+  .memwrap[hidden]{display:none}
+  .mempanel{width:100%;max-width:900px;display:flex;flex-direction:column;gap:14px}
+  .memtabs{display:flex;flex-wrap:wrap;gap:6px}
+  .memtab{background:transparent;border:1px solid var(--edge);border-radius:18px;color:var(--ash);cursor:pointer;
+    font-family:"Cinzel",serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:7px 13px}
+  .memtab:hover{color:var(--bone);border-color:var(--bone)}
+  .memtab.on{color:var(--bone);background:rgba(214,90,63,.16);border-color:var(--ember)}
+  .memtab.mt-selene.on{background:rgba(143,163,176,.18);border-color:var(--steel)}
+  .memtab.mt-mirael.on{background:rgba(154,134,189,.2);border-color:var(--violet)}
+  .memtab.mt-talia.on{background:rgba(207,203,214,.14);border-color:var(--pale)}
+  .memcard{border:1px solid var(--edge);border-left:3px solid var(--edge);border-radius:10px;padding:14px 16px 16px;background:rgba(20,16,15,.75);margin-bottom:12px}
+  .memcard.mc-selene{border-left-color:var(--steel)} .memcard.mc-nysera{border-left-color:var(--ember-hi)}
+  .memcard.mc-mirael{border-left-color:var(--violet-hi)} .memcard.mc-talia{border-left-color:var(--pale-hi)}
+  .memcard.mc-shared{border-left-color:#c8973f} .memcard.mc-rel{background:rgba(26,18,16,.85)}
+  .memcard.mc-yt{border-left-color:#b5392c} .memcard.mc-site{border-left-color:#6f86a0}
+  .memsub{font-size:13.5px;color:var(--ash-dim);font-style:italic;margin:-2px 0 10px}
+  .memtext{white-space:pre-wrap;font-size:16.5px;line-height:1.6;color:var(--bone)}
+  .memnone{color:var(--ash);font-style:italic;padding:10px 2px}
+  .memsearch{width:100%;background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-family:"EB Garamond",serif;font-size:16px;
+    padding:9px 12px;border-radius:8px;margin-bottom:10px}
+  .memsearch:focus{outline:none;border-color:var(--ember)}
+  .arcrow{padding:10px 12px;border:1px solid var(--edge);border-radius:8px;margin-bottom:8px;cursor:pointer;background:rgba(20,16,15,.6)}
+  .arcrow:hover{border-color:var(--violet-hi)}
+  .arct{font-size:17px;color:var(--bone)} .arcd{font-size:12.5px;color:var(--ash-dim);margin-top:2px}
+  .arcbody{white-space:normal}
+  .arcwho{font-family:"Cinzel",serif;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ash-dim);margin:12px 0 4px}
+  .arcline{margin:3px 0} .arcname{font-family:"Cinzel",serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+  .arcname.n-selene{color:var(--steel)} .arcname.n-nysera{color:var(--ember-hi)} .arcname.n-mirael{color:var(--violet-hi)} .arcname.n-talia{color:var(--pale-hi)}
+  .ytstats{font-size:17px;color:var(--bone);margin-bottom:6px} .ytmoment{color:#e0b35a;font-style:italic;margin-bottom:8px}
+  .ytrow{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--edge);flex-wrap:wrap}
+  .ytt{color:var(--bone)} .ytn{color:var(--ash);font-size:13px}
+  .ytcl{margin-top:14px} .ytc{padding:6px 0 8px;border-bottom:1px solid var(--edge)}
+  .ytca{font-size:12.5px;color:var(--ash-dim)} .ytct{font-size:15.5px;color:var(--bone)}
+  .memcard .tool{margin-top:12px}
+  .sitepages{display:flex;flex-wrap:wrap;gap:6px}
+  .sitepage{font-size:13.5px;color:var(--ash);border:1px solid var(--edge);border-radius:14px;padding:3px 10px;text-decoration:none}
+  .sitepage:hover{color:var(--bone);border-color:var(--bone)}
+  .scopegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
+  .scopebtn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:rgba(10,8,8,.6);border:1px solid var(--edge);border-radius:8px;
+    padding:10px 12px;cursor:pointer;color:var(--bone);font-family:"EB Garamond",serif;font-size:15px;text-align:left}
+  .scopebtn:hover{border-color:var(--ember)} .scc{font-size:12.5px;color:var(--ash-dim)}
+  .scopehead{margin-top:12px}
+  .chunk{border-bottom:1px solid var(--edge);padding:10px 0}
+  .chunkt{font-family:"Cinzel",serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ash);margin-bottom:4px}
+
   /* ===== THE LOCK ===== */
   .lock{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:24px;
     background:radial-gradient(ellipse at 50% 42%, rgba(120,36,24,.28), transparent 60%), #0a0808}
@@ -479,6 +528,7 @@
         <div class="tools">
           <button class="tool" id="btnMap" title="The lodge and the grounds, and who is where">Map</button>
           <button class="tool" id="btnNotes" title="What they left for you">Notes</button>
+          <button class="tool" id="btnMemory" title="What they carry, the archive, and what they know">Memory</button>
           <button class="tool" id="btnSettings" title="The calendar and the rhythm of the house">Settings</button>
           <button class="tool" id="btnAmbient" title="Let them speak up on their own when you go quiet">Ambient: On</button>
           <button class="tool" id="btnAuto" title="Let them fold the conversation into memory on their own">Auto-save: On</button>
@@ -567,6 +617,16 @@
         <label>and fills in <input type="number" id="emrest" min="1" max="168" step="1"> hours in the fold</label>
       </section>
       <div class="setfoot"><span id="setmsg"></span><button class="send" id="setsave">Save</button></div>
+    </div>
+  </div>
+  <div class="memwrap" id="memwrap" hidden>
+    <div class="mempanel">
+      <div class="maphead">
+        <div><div class="bk">Memory</div><div class="hint">What each of them carries, everything Mirael has documented, and what they know.</div></div>
+        <button class="tool" id="memClose">Close</button>
+      </div>
+      <div class="memtabs" id="memtabs"></div>
+      <div id="membody"></div>
     </div>
   </div>
   <div class="toast" id="toast" hidden></div>
@@ -2105,13 +2165,174 @@
     }).catch(function(){ pushMsg('That did not go out.', 'off'); });
   });
 
+  /* =====================================================================
+     MEMORY: what each of them carries, the archive, and what they know
+     ===================================================================== */
+  var memTab = 'selene', memData = null, arcList = null, knowData = null;
+  var MEM_TABS = [['selene','Selene'],['nysera','Nysera'],['mirael','Mirael'],['talia','Talia'],['shared','Together'],['archive','The archive'],['know','What they know']];
+  function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; }
+  function when(iso){
+    var t=Date.parse(iso||''); if(isNaN(t)) return '';
+    try{ return new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Athens',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(t)); }catch(e){ return iso; }
+  }
+  function fmtN(x){ return String(x||0).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+  function openMemory(){ document.getElementById('memwrap').hidden=false; renderMemTabs(); showMemTab(memTab); }
+  function closeMemory(){ document.getElementById('memwrap').hidden=true; }
+  function renderMemTabs(){
+    var bar=document.getElementById('memtabs'); bar.innerHTML='';
+    MEM_TABS.forEach(function(t){
+      var b=el('button','memtab mt-'+t[0]+(memTab===t[0]?' on':''),t[1]);
+      b.addEventListener('click',function(){ memTab=t[0]; renderMemTabs(); showMemTab(t[0]); });
+      bar.appendChild(b);
+    });
+  }
+  function memBody(){ var b=document.getElementById('membody'); b.innerHTML=''; return b; }
+  function loading(b){ b.appendChild(el('div','memnone','Opening…')); }
+  function showMemTab(t){
+    var b=memBody();
+    if(t==='archive'){ return showArchive(); }
+    if(t==='know'){ return showKnow(); }
+    if(memData){ return drawMem(t); }
+    loading(b);
+    opCall('memoryView').then(function(d){ memData=d; if(memTab===t) drawMem(t); }).catch(function(){ memBody().appendChild(el('div','memnone','Could not open their memory.')); });
+  }
+  function textCard(title, sub, text, cls){
+    var c=el('div','memcard '+(cls||''));
+    c.appendChild(el('div','mlabel',title));
+    if(sub) c.appendChild(el('div','memsub',sub));
+    c.appendChild(el('div','memtext', text && text.trim() ? text : 'Nothing yet.'));
+    return c;
+  }
+  function drawMem(t){
+    var b=memBody();
+    if(t==='shared'){
+      b.appendChild(textCard('What they have lived together in this room','The shared thread, updated whenever a conversation is saved.', memData.mem.shared, 'mc-shared'));
+      return;
+    }
+    var name=STATE_LABEL[t];
+    b.appendChild(textCard('What '+name+' carries', 'Her own thread of your life together, from her side.', memData.mem[t], 'mc-'+t));
+    b.appendChild(textCard(name+"'s read on where she stands with you", "Private to her. In the story you can't see this, and she doesn't know you can.", memData.rel[t], 'mc-'+t+' mc-rel'));
+  }
+
+  /* ----- the archive: everything Mirael has documented ----- */
+  function showArchive(){
+    var b=memBody();
+    if(!arcList){ loading(b); opCall('archiveList').then(function(d){ arcList=d.records||[]; if(memTab==='archive') showArchive(); }).catch(function(){ memBody().appendChild(el('div','memnone','Could not open the archive.')); }); return; }
+    var q=el('input','memsearch'); q.placeholder='Search the archive by title or tag…';
+    var list=el('div','arclist');
+    b.appendChild(q); b.appendChild(list);
+    function draw(){
+      list.innerHTML='';
+      var s=(q.value||'').toLowerCase().trim();
+      var rows=arcList.filter(function(r){ return !s || (r.title||'').toLowerCase().indexOf(s)>-1 || (r.tags||[]).join(' ').toLowerCase().indexOf(s)>-1; });
+      if(!rows.length){ list.appendChild(el('div','memnone', arcList.length ? 'Nothing matches.' : 'Nothing documented yet. Ask Mirael to document something.')); return; }
+      rows.forEach(function(r){
+        var row=el('div','arcrow');
+        row.appendChild(el('div','arct',r.title||'Untitled record'));
+        row.appendChild(el('div','arcd',when(r.created)+((r.tags||[]).length?'  ·  '+r.tags.join(', '):'')+(r.canon?'  ·  canon':'')));
+        row.addEventListener('click',function(){ openRecord(r.id); });
+        list.appendChild(row);
+      });
+    }
+    q.addEventListener('input',draw); draw();
+  }
+  function openRecord(id){
+    var b=memBody(); loading(b);
+    opCall('archiveRecord',{id:id}).then(function(d){
+      var r=d.record, bb=memBody();
+      var back=el('button','tool','Back to the archive'); back.addEventListener('click',showArchive); bb.appendChild(back);
+      var card=el('div','memcard mc-mirael');
+      card.appendChild(el('div','mlabel',r.title||'Untitled record'));
+      card.appendChild(el('div','memsub','Recorded by Mirael, '+when(r.created)+((r.tags||[]).length?'  ·  '+r.tags.join(', '):'')+'. Word for word.'));
+      var tx=el('div','memtext arcbody');
+      String(r.body||'').split('\n').forEach(function(line){
+        var m=line.match(/^(ADGER|THE ROOM):\s*$/);
+        if(m){ tx.appendChild(el('div','arcwho',m[1]==='ADGER'?'You':'The room')); return; }
+        var sp=line.match(/^(SELENE|NYSERA|MIRAEL|TALIA)(?:\s*\[[a-z]+\])?:\s*(.*)$/);
+        if(sp){ var p=el('div','arcline'); var n=el('span','arcname n-'+sp[1].toLowerCase(),LABEL[sp[1].toLowerCase()]+' '); p.appendChild(n); p.appendChild(document.createTextNode(sp[2])); tx.appendChild(p); return; }
+        if(line.trim()) tx.appendChild(el('div','arcline',line));
+      });
+      card.appendChild(tx); bb.appendChild(card);
+    }).catch(function(){ memBody().appendChild(el('div','memnone','Could not open that record.')); });
+  }
+
+  /* ----- what they know: canon, the website, the channel ----- */
+  var SCOPE_LABEL = { shared:'Shared canon, all four know it', selene:"Selene's own", nysera:"Nysera's own", mirael:"Mirael's own", talia:"Talia's own", site:'The website' };
+  function showKnow(){
+    var b=memBody();
+    if(!knowData){ loading(b); opCall('knowledgeScopes').then(function(d){ knowData=d; if(memTab==='know') showKnow(); }).catch(function(){ memBody().appendChild(el('div','memnone','Could not open what they know.')); }); return; }
+    var K=knowData;
+    // the channel
+    var yc=el('div','memcard mc-yt'); yc.appendChild(el('div','mlabel','The channel'));
+    if(!K.youtubeKey){
+      yc.appendChild(el('div','memsub','Not switched on yet. It needs a free YouTube API key saved in Vercel as YOUTUBE_API_KEY.'));
+    } else if(!K.youtube){
+      yc.appendChild(el('div','memsub','The key is set. The first reading happens on the next check.'));
+    } else {
+      var Y=K.youtube;
+      yc.appendChild(el('div','ytstats', fmtN(Y.subs)+' subscribers  ·  '+fmtN(Y.views)+' views  ·  read '+when(Y.at)));
+      if(Y.moments && Y.moments.length) yc.appendChild(el('div','ytmoment','Just happened: '+Y.moments.join('; ')));
+      var tbl=el('div','yttable');
+      (Y.videos||[]).slice(0,12).forEach(function(v){
+        var r=el('div','ytrow'); r.appendChild(el('div','ytt',v.title)); r.appendChild(el('div','ytn',fmtN(v.views)+' views  ·  '+fmtN(v.likes)+' likes  ·  '+fmtN(v.comments)+' comments')); tbl.appendChild(r);
+      });
+      yc.appendChild(tbl);
+      if((Y.comments||[]).length){
+        yc.appendChild(el('div','mlabel ytcl','Newest comments'));
+        Y.comments.slice(0,8).forEach(function(c){ var cc=el('div','ytc'); cc.appendChild(el('div','ytca',c.author+(c.video?' on '+c.video:'')+'  ·  '+when(c.at))); cc.appendChild(el('div','ytct',c.text)); yc.appendChild(cc); });
+      }
+    }
+    if(K.youtubeKey){ var yb=el('button','tool','Check the channel now'); yb.addEventListener('click',function(){ yb.textContent='Checking…'; opCall('ytRefresh').then(function(){ knowData=null; showKnow(); }).catch(function(){ yb.textContent='That did not work'; }); }); yc.appendChild(yb); }
+    b.appendChild(yc);
+    // the website
+    var sc=el('div','memcard mc-site'); sc.appendChild(el('div','mlabel','The website'));
+    if(K.site && K.site.pages){
+      sc.appendChild(el('div','memsub',K.site.pages.length+' pages, read '+when(K.site.at)+'. They know it the way you know your own shop window.'));
+      var pl=el('div','sitepages');
+      K.site.pages.forEach(function(p){ var a=el('a','sitepage',p.title); a.href=p.url; a.target='_blank'; a.rel='noopener'; pl.appendChild(a); });
+      sc.appendChild(pl);
+    } else { sc.appendChild(el('div','memsub','Not read yet. It reads itself once a day, or now:')); }
+    var sb=el('button','tool','Read the website now'); sb.addEventListener('click',function(){ sb.textContent='Reading…'; opCall('siteRefresh').then(function(d){ knowData=null; showKnow(); }).catch(function(){ sb.textContent='That did not work'; }); });
+    sc.appendChild(sb); b.appendChild(sc);
+    // canon
+    var cc=el('div','memcard'); cc.appendChild(el('div','mlabel','Their canon, what the room can draw on'));
+    var grid=el('div','scopegrid');
+    (K.scopes||[]).forEach(function(s){
+      var t=el('button','scopebtn sb-'+s.scope); t.appendChild(el('span','scn',SCOPE_LABEL[s.scope]||s.scope)); t.appendChild(el('span','scc',s.count+(s.count===1?' piece':' pieces')));
+      t.addEventListener('click',function(){ openScope(s.scope); });
+      grid.appendChild(t);
+    });
+    cc.appendChild(grid); b.appendChild(cc);
+  }
+  function openScope(scope){
+    var b=memBody(); loading(b);
+    opCall('knowledgeScope',{scope:scope}).then(function(d){
+      var bb=memBody();
+      var back=el('button','tool','Back'); back.addEventListener('click',showKnow); bb.appendChild(back);
+      bb.appendChild(el('div','mlabel scopehead',SCOPE_LABEL[scope]||scope));
+      var q=el('input','memsearch'); q.placeholder='Search…'; bb.appendChild(q);
+      var list=el('div','chunklist'); bb.appendChild(list);
+      function draw(){
+        list.innerHTML=''; var s=(q.value||'').toLowerCase().trim();
+        var rows=(d.chunks||[]).filter(function(c){ return !s || (c.title+' '+c.text).toLowerCase().indexOf(s)>-1; });
+        if(!rows.length){ list.appendChild(el('div','memnone','Nothing here.')); return; }
+        rows.slice(0,200).forEach(function(c){ var k=el('div','chunk'); k.appendChild(el('div','chunkt',c.title||c.id)); k.appendChild(el('div','memtext',c.text)); list.appendChild(k); });
+      }
+      q.addEventListener('input',draw); draw();
+    }).catch(function(){ memBody().appendChild(el('div','memnone','Could not open that.')); });
+  }
+  document.getElementById('btnMemory').addEventListener('click', function(){ memData=null; arcList=null; knowData=null; openMemory(); });
+  document.getElementById('memClose').addEventListener('click', closeMemory);
+  document.getElementById('memwrap').addEventListener('click', function(e){ if(e.target===this) closeMemory(); });
+
   document.getElementById('btnSettings').addEventListener('click', openSettings);
   document.getElementById('setClose').addEventListener('click', closeSettings);
   document.getElementById('setwrap').addEventListener('click', function(e){ if(e.target === this) closeSettings(); });
 
   document.addEventListener('keydown', function(e){
     if(e.key!=='Escape') return;
-    if(!document.getElementById('setwrap').hidden) closeSettings();
+    if(!document.getElementById('memwrap').hidden) closeMemory();
+    else if(!document.getElementById('setwrap').hidden) closeSettings();
     else if(notesOpen) closeNotes();
   });
 
