@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Room</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0a0808">
+<link rel="manifest" href="/room.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="/room-icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/room-icon-192.png">
+<link rel="apple-touch-icon" href="/room-icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="The Room">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0808; --stone:#161213; --stone2:#1b1516; --edge:#2c2422;
+    --bone:#ece6da; --ash:#a59a8d; --ash-dim:#7b7065;
+    --ember:#b5392c; --ember-hi:#d65a3f; --blood:#9e1f1a; --ember-dim:#5d1f1b;
+    --steel:#8fa3b0; --steel-dim:#3a4650;
+    --violet:#9a86bd; --violet-hi:#b6a2d6; --violet-dim:#40355c;
+    --pale:#cfcbd6; --pale-hi:#e6e2ec; --pale-dim:#4c4856;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--ink);color:var(--bone);font-family:"EB Garamond",Georgia,serif;-webkit-font-smoothing:antialiased}
+  /* the room owns the whole screen; the insets keep it clear of a phone's notch and home bar */
+  :root{ --nav: 0px; }
+  .fg{position:fixed;left:0;right:0;top:var(--nav);bottom:0;
+    height:calc(100vh - var(--nav));height:calc(100dvh - var(--nav));
+    max-width:1440px;margin:0 auto;
+    padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+    display:flex;flex-direction:row;background:var(--ink);
+    border-left:1px solid var(--edge);border-right:1px solid var(--edge);
+    border-top:1px solid var(--edge)}
+
+  /* ===== LEFT: four of them, a 2x2 grid, fixed ===== */
+  .side{flex:none;width:300px;border-right:1px solid var(--edge);background:rgba(10,8,8,.55);
+    display:flex;flex-direction:column;gap:12px;padding:16px 14px}
+  .who{position:relative;width:100%;flex:1 1 0;min-height:0;border-radius:13px;overflow:hidden;
+    border:1px solid var(--edge);background:#0d0a09;box-shadow:0 12px 30px rgba(0,0,0,.55);
+    cursor:pointer;user-select:none;
+    transition:box-shadow .45s ease, transform .3s ease, opacity .45s ease, filter .45s ease;opacity:.7}
+  .who video,.who img{width:100%;height:100%;object-fit:cover;object-position:center 26%;display:block}
+  .who::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:13px;
+    box-shadow:inset 0 0 42px rgba(0,0,0,.5)}
+  .who .nm{position:absolute;left:0;right:0;bottom:0;padding:22px 8px 9px;text-align:center;
+    background:linear-gradient(180deg,transparent,rgba(0,0,0,.85));
+    font-family:"Cinzel",serif;font-size:11px;letter-spacing:.2em;text-transform:uppercase}
+  .who .state{position:absolute;top:7px;right:9px;font-family:"Cinzel",serif;font-size:8px;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--ash-dim);opacity:0;transition:opacity .3s}
+
+  #wSelene{border-color:var(--steel-dim)} #wSelene .nm{color:var(--steel)} #wSelene{background:#0d0a09 radial-gradient(circle at 50% 38%, rgba(143,163,176,.14), transparent 70%)}
+  #wNysera{border-color:var(--ember-dim)} #wNysera .nm{color:var(--ember-hi)} #wNysera{background:#0d0a09 radial-gradient(circle at 50% 38%, rgba(214,90,63,.14), transparent 70%)}
+  #wMirael{border-color:var(--violet-dim)} #wMirael .nm{color:var(--violet-hi)} #wMirael{background:#0d0a09 radial-gradient(circle at 50% 38%, rgba(154,134,189,.16), transparent 70%)}
+  #wTalia{border-color:var(--pale-dim)}   #wTalia .nm{color:var(--pale-hi)}   #wTalia{background:#0d0a09 radial-gradient(circle at 50% 38%, rgba(207,203,214,.14), transparent 70%)}
+
+  /* present + speaking */
+  .who.live{opacity:1;transform:scale(1.02)}
+  .who:not(.out):hover{opacity:.92}
+  #wSelene.live{box-shadow:0 12px 30px rgba(0,0,0,.55), 0 0 38px rgba(143,163,176,.55)}
+  #wNysera.live{box-shadow:0 12px 30px rgba(0,0,0,.55), 0 0 40px rgba(214,90,63,.6)}
+  #wMirael.live{box-shadow:0 12px 30px rgba(0,0,0,.55), 0 0 40px rgba(154,134,189,.6)}
+  #wTalia.live{box-shadow:0 12px 30px rgba(0,0,0,.55), 0 0 38px rgba(207,203,214,.5)}
+
+  /* toggled OUT of the room */
+  .who.out{opacity:.28;filter:grayscale(.85) brightness(.7);transform:scale(.985)}
+  .who.out .state{opacity:1}
+  .who.out .nm{color:var(--ash-dim)}
+
+  /* ===== RIGHT: header + chat + composer ===== */
+  .main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+  .rail{flex:none;border-bottom:1px solid var(--edge);background:rgba(10,8,8,.97);padding:16px 20px}
+  .rail-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .bk{font-family:"Cinzel",serif;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ash-dim)}
+  .sub{font-size:13px;color:var(--ash-dim);font-style:italic;margin-top:3px}
+  .tools{display:flex;gap:8px}
+  .tool{background:transparent;border:1px solid var(--edge);border-radius:6px;cursor:pointer;
+    color:var(--ash);font-family:"Cinzel",serif;font-size:10px;letter-spacing:.12em;
+    text-transform:uppercase;padding:7px 11px}
+  .tool:hover{border-color:var(--bone);color:var(--bone)}
+
+  .thread{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+    padding:24px 26px 16px;display:flex;flex-direction:column;gap:16px}
+  .msg{max-width:88%}
+  .msg.me{align-self:flex-end}
+  .lbl{font-family:"Cinzel",serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px}
+  .msg.me .lbl{color:var(--ash-dim);text-align:right}
+  .msg.me .txt{background:var(--stone2);border:1px solid var(--edge);border-radius:10px;
+    padding:10px 14px;display:inline-block;text-align:left}
+  .txt{white-space:pre-wrap;font-size:18.5px;line-height:1.62}
+  .msg.selene .lbl{color:var(--steel)}  .msg.selene .txt{border-left:2px solid var(--steel-dim);padding-left:14px}
+  .msg.nysera .lbl{color:var(--ember-hi)} .msg.nysera .txt{border-left:2px solid var(--ember-dim);padding-left:14px}
+  .msg.mirael .lbl{color:var(--violet-hi)} .msg.mirael .txt{border-left:2px solid var(--violet-dim);padding-left:14px}
+  .msg.talia .lbl{color:var(--pale-hi)}  .msg.talia .txt{border-left:2px solid var(--pale-dim);padding-left:14px}
+  .msg.note .txt{background:#1a1210;border:1px solid var(--ember-dim);border-radius:8px;
+    padding:12px 14px;font-size:15px;color:#e9c7c0}
+  .empty{margin:auto;text-align:center;max-width:460px;color:var(--ash);padding:36px 18px}
+  .empty .s{font-size:30px;color:var(--ember);opacity:.85;margin-bottom:12px}
+  .empty .hint{font-size:14px;color:var(--ash-dim);font-style:italic;margin-top:9px}
+  .dots span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--ash);
+    margin-right:4px;animation:b 1s infinite}
+  .dots span:nth-child(2){animation-delay:.15s}.dots span:nth-child(3){animation-delay:.3s}
+  @keyframes b{0%,60%,100%{opacity:.25}30%{opacity:1}}
+  @media(prefers-reduced-motion:reduce){.dots span{animation:none}.who{transition:none}}
+
+  .composer{flex:none;border-top:1px solid var(--edge);background:var(--stone);padding:12px 16px 14px;display:flex;gap:9px}
+  .composer textarea{flex:1;background:var(--ink);border:1px solid var(--edge);color:var(--bone);
+    font-family:"EB Garamond",serif;font-size:17px;padding:11px 13px;border-radius:8px;resize:none;
+    min-height:46px;max-height:150px}
+  .composer textarea:focus{outline:none;border-color:var(--ember)}
+  .send{flex:none;align-self:flex-end;background:linear-gradient(180deg,var(--ember),var(--blood));
+    border:0;color:#fff;font-family:"Cinzel",serif;font-size:11px;letter-spacing:.13em;
+    text-transform:uppercase;padding:13px 19px;border-radius:8px;cursor:pointer}
+  .send:disabled{opacity:.4;cursor:not-allowed}
+
+  /* scene / setting selector */
+  .setting{display:flex;align-items:center;gap:8px;margin-top:11px}
+  .setting label{font-family:"Cinzel",serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ash-dim)}
+  .setting select,.setting input{background:var(--ink);border:1px solid var(--edge);color:var(--bone);
+    font-family:"EB Garamond",serif;font-size:13px;padding:5px 8px;border-radius:6px}
+  .setting select{max-width:240px}
+  .setting select:focus,.setting input:focus{outline:none;border-color:var(--ember)}
+  .setting .callnote{font-size:12px;color:var(--ember-hi);font-style:italic}
+
+  /* per-portrait location select, sits over the bottom of each face */
+  .locsel{position:absolute;left:6px;right:6px;bottom:4px;z-index:4;
+    background:rgba(10,8,8,.82);border:1px solid var(--edge);color:var(--ash);
+    font-family:"EB Garamond",serif;font-size:11px;padding:2px 4px;border-radius:5px;
+    opacity:0;transition:opacity .25s;cursor:pointer}
+  .who:hover .locsel,.locsel:focus{opacity:1}
+  .locsel:focus{outline:none;border-color:var(--ember);color:var(--bone)}
+  .who.out .locsel{display:none}
+  .who .here{position:absolute;top:7px;left:9px;z-index:4;font-family:"Cinzel",serif;font-size:8px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--ash-dim);
+    background:rgba(10,8,8,.7);padding:2px 6px;border-radius:10px;max-width:80%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* whisper bar */
+  .whisperbar{flex:none;display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:9px 18px 2px}
+  .whisperbar.empty{display:none}
+  .whisperbar .wl{font-family:"Cinzel",serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ash-dim)}
+  .wchip{font-family:"Cinzel",serif;font-size:10px;letter-spacing:.05em;padding:4px 11px;border-radius:20px;
+    cursor:pointer;border:1px solid var(--edge);color:var(--ash);background:transparent}
+  .wchip:hover{border-color:var(--bone);color:var(--bone)}
+  .wchip.on{background:rgba(214,90,63,.18);border-color:var(--ember);color:var(--bone)}
+  .composer.whisper textarea{border-color:var(--ember);background:rgba(181,57,44,.05)}
+  .msg.me.whisper .txt{border:1px dashed var(--ember-dim);background:rgba(181,57,44,.08)}
+  .msg.me .wtag{font-family:"Cinzel",serif;font-size:8px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ember-hi);font-style:italic;margin-bottom:4px;text-align:right}
+
+  /* image attach */
+  .attach{flex:none;align-self:flex-end;background:transparent;border:1px solid var(--edge);
+    color:var(--ash);font-size:19px;line-height:1;padding:12px 13px;border-radius:8px;cursor:pointer}
+  .attach:hover{border-color:var(--bone);color:var(--bone)}
+  .attach.has{border-color:var(--ember);color:var(--ember-hi)}
+  .shots{flex:none;display:flex;gap:7px;flex-wrap:wrap;padding:8px 18px 0}
+  .shots.empty{display:none}
+  .shot{position:relative;width:56px;height:56px;border-radius:7px;overflow:hidden;border:1px solid var(--edge)}
+  .shot img{width:100%;height:100%;object-fit:cover;display:block}
+  .shot .x{position:absolute;top:0;right:0;background:rgba(10,8,8,.85);color:var(--bone);
+    font-size:11px;line-height:1;padding:2px 5px;cursor:pointer;border-bottom-left-radius:6px}
+  .msg.me .shots-in{display:flex;gap:6px;margin-bottom:6px;justify-content:flex-end}
+  .msg.me .shots-in img{width:120px;border-radius:8px;border:1px solid var(--edge);display:block}
+
+  /* mood tint on a spoken line's border */
+  .txt.m-warm,.txt.m-tender,.txt.m-soft{border-left-color:#c8973f !important}
+  .txt.m-teasing,.txt.m-playful{border-left-color:var(--ember-hi) !important}
+  .txt.m-grave,.txt.m-sad{border-left-color:#6f86a0 !important}
+  .txt.m-angry{border-left-color:var(--blood) !important}
+  .txt.m-cold{border-left-color:#9fb0bd !important}
+
+  /* ===== STATE STRIP: where everyone is, straight from the room state ===== */
+  .statebar{flex:none;border-bottom:1px solid var(--edge);background:rgba(10,8,8,.92);
+    padding:7px 20px 8px;display:flex;flex-wrap:wrap;align-items:center;gap:0 4px}
+  .statebar.empty{display:none}
+  .statebar .sl{font-family:"Cinzel",serif;font-size:8px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--ash-dim);margin-right:10px;flex:none}
+  .strow{display:flex;align-items:baseline;gap:6px;padding:3px 10px;border-radius:5px;
+    margin:1px 0;transition:background 1.2s ease;white-space:nowrap}
+  .strow .n{font-family:"Cinzel",serif;font-size:9px;letter-spacing:.13em;text-transform:uppercase}
+  .strow .w{color:var(--ash);font-size:12.5px}
+  .strow .d{color:var(--bone);font-style:italic;font-size:13px}
+  .strow .t{color:var(--ash-dim);font-size:10px;font-family:"Cinzel",serif;letter-spacing:.06em}
+  .strow.gone{opacity:.42}
+  .strow.old .d{color:var(--ash-dim);font-style:italic;text-decoration:line-through;text-decoration-color:rgba(123,112,101,.45)}
+  .strow.old .t{opacity:.7}
+  .strow.flash{background:rgba(214,90,63,.26)}
+  .st-selene .n{color:var(--steel)}
+  .st-nysera .n{color:var(--ember-hi)}
+  .st-mirael .n{color:var(--violet-hi)}
+  .st-talia  .n{color:var(--pale-hi)}
+  .st-adger  .n{color:var(--ash-dim)}
+  .st-sera   .n{color:#e0935a}
+  .st-virestar .n{color:#b9c4d0}
+  .st-virestar .d{color:var(--ash);font-style:normal}
+
+  /* time-of-day skin: a gentle wash over the whole room */
+  .fg::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:6;background:transparent;transition:background 1.8s ease}
+  .fg.tod-night::after{background:linear-gradient(180deg, rgba(30,26,54,.16), rgba(10,8,16,.10))}
+  .fg.tod-dawn::after{background:linear-gradient(180deg, rgba(150,90,60,.11), rgba(60,30,30,.05))}
+  .fg.tod-day::after{background:linear-gradient(180deg, rgba(120,140,160,.05), transparent)}
+  .fg.tod-dusk::after{background:linear-gradient(180deg, rgba(160,70,45,.13), rgba(40,20,30,.06))}
+
+  /* ===== NARROW SCREENS: portraits become a row on top ===== */
+  @media(max-width:760px){
+    /* let top/bottom define the height - old iOS lacks dvh and overshoots with vh */
+    .fg{flex-direction:column;max-width:900px;height:auto}
+    .side{width:auto;flex:none;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+      border-right:0;border-bottom:1px solid var(--edge);padding:10px}
+    .who{aspect-ratio:1/1;flex:none;min-height:0}
+    .who .nm{font-size:8px;padding:14px 4px 5px}
+    /* the whole point: these must be able to shrink so .thread gets the scroll */
+    .main{min-height:0}
+    .rail{padding:11px 14px}
+    .statebar{padding:6px 14px 7px}
+    .strow{padding:2px 7px}
+    .strow .w{font-size:11.5px}
+    .strow .d{font-size:12px}
+    .thread{padding:16px 15px 12px}
+    .composer{padding:9px 11px 11px}
+    .whisperbar{padding:8px 14px 2px}
+    .shots{padding:7px 14px 0}
+    /* no hover on touch - always show the location pickers */
+    .locsel{opacity:1;font-size:16px;padding:3px 4px}
+    /* 16px minimum stops iOS auto-zooming on focus */
+    .composer textarea,.setting select,.setting input{font-size:16px}
+    .send{padding:12px 14px}
+  }
+  /* any touch/no-hover device, regardless of width */
+  @media(hover:none){ .locsel{opacity:1} }
+
+  /* ===== THE ROOM ITSELF: the place Adger is in, its light and its weather ===== */
+  .main{position:relative;isolation:isolate}
+  .main > *:not(.scene){position:relative;z-index:1}
+  .scene{position:absolute !important;inset:0;z-index:0 !important;overflow:hidden;pointer-events:none;
+    background:#0d0a09;--lit:.8;--sat:.92;transition:background 2s ease}
+  .scene .bg{position:absolute;inset:-3%;background-size:cover;background-position:center;opacity:0;
+    transition:opacity 1.6s ease, filter 2.4s ease;filter:brightness(var(--lit)) saturate(var(--sat));
+    animation:drift 70s ease-in-out infinite alternate}
+  .scene .bg.on{opacity:1}
+  @keyframes drift{from{transform:scale(1.02) translate(0,0)}to{transform:scale(1.07) translate(-1.2%,-.8%)}}
+  .scene canvas{position:absolute;inset:0;width:100%;height:100%}
+  .scene .fog{position:absolute;top:-10%;bottom:-10%;left:-60%;right:-60%;opacity:0;transition:opacity 4s ease;
+    background:
+      radial-gradient(ellipse 22% 20% at 18% 72%, rgba(210,214,224,.5), transparent 70%),
+      radial-gradient(ellipse 26% 22% at 44% 84%, rgba(210,214,224,.46), transparent 70%),
+      radial-gradient(ellipse 20% 16% at 66% 64%, rgba(210,214,224,.4), transparent 70%),
+      radial-gradient(ellipse 24% 20% at 88% 80%, rgba(210,214,224,.46), transparent 70%);
+    animation:fogdrift 140s linear infinite alternate}
+  .scene .fog.on{opacity:var(--fog,.6)}
+  @keyframes fogdrift{from{transform:translateX(-12%)}to{transform:translateX(12%)}}
+  .scene .flash{position:absolute;inset:0;background:#dfe6ff;opacity:0}
+  .scene .shade{position:absolute;inset:0;background:
+      linear-gradient(180deg, rgba(10,8,8,.80) 0%, rgba(10,8,8,.40) 20%, rgba(10,8,8,.44) 60%, rgba(10,8,8,.90) 100%),
+      radial-gradient(ellipse at 50% 42%, transparent 38%, rgba(10,8,8,.62) 100%)}
+  .scene.noart{background:radial-gradient(ellipse at 28% 26%, rgba(214,140,70,.12), transparent 55%), radial-gradient(ellipse at 80% 90%, rgba(120,60,40,.10), transparent 60%), #0d0a09}
+  .scene.fold{background:radial-gradient(ellipse at 50% 58%, #2d2150 0%, #150f26 42%, #07060b 100%)}
+  .scene.fold .shade{background:radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(7,6,11,.7) 100%)}
+  @media(prefers-reduced-motion:reduce){ .scene .bg,.scene .fog{animation:none} }
+
+  /* chrome goes glassy so the room shows through the edges */
+  .rail{background:rgba(10,8,8,.86);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  .statebar{background:rgba(10,8,8,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  .composer{background:rgba(22,18,19,.9);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  .thread .txt{text-shadow:0 1px 2px rgba(0,0,0,.9), 0 0 14px rgba(0,0,0,.55)}
+  .msg.me .txt{background:rgba(27,21,22,.88)}
+  .empty{background:rgba(10,8,8,.55);border-radius:14px}
+
+  /* weather chip and Adger's ember */
+  .setting{flex-wrap:wrap;row-gap:8px}
+  .setting .right{margin-left:auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .wx{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ash);white-space:nowrap;cursor:default}
+  .wx[hidden],.ember[hidden]{display:none}
+  .wx svg{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .wx .wl{font-family:"Cinzel",serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ash-dim)}
+  .wx b{font-weight:500;color:var(--bone)}
+  .ember{display:inline-flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap;user-select:none}
+  .ember .el{font-family:"Cinzel",serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ash-dim)}
+  .ember .eb{position:relative;width:96px;height:7px;border-radius:6px;background:#1d1715;border:1px solid var(--edge);overflow:hidden}
+  .ember .eb i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;
+    background:linear-gradient(90deg,#6e1a14,#b5392c 30%,#d65a3f 60%,#f0b35a);background-size:96px 100%;
+    box-shadow:0 0 10px rgba(240,150,80,.6);transition:width 1.2s ease}
+  .ember .ev{font-family:"Cinzel",serif;font-size:10px;color:var(--bone);min-width:28px}
+  .ember .et{font-size:12px;color:var(--ash-dim);font-style:italic}
+  .ember.low .eb i{animation:emberpulse 2.4s ease-in-out infinite}
+  .ember.low .et{color:var(--ember-hi)}
+  @keyframes emberpulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .ember.resting .eb i{background:linear-gradient(90deg,#40355c,#9a86bd 60%,#d8cdf0);background-size:96px 100%;box-shadow:0 0 10px rgba(154,134,189,.6)}
+  @media(prefers-reduced-motion:reduce){ .ember.low .eb i{animation:none} }
+
+  /* ===== THE MAP: the lodge, the grounds, and who is where ===== */
+  .mapwrap{position:absolute;inset:0;z-index:8;background:rgba(6,5,5,.9);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+    display:flex;justify-content:center;padding:18px 18px 22px;overflow-y:auto}
+  .mapwrap[hidden]{display:none}
+  .map{width:100%;max-width:1080px;display:flex;flex-direction:column;gap:14px}
+  .maphead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .maphead .hint{font-size:14px;color:var(--ash);font-style:italic;margin-top:4px}
+  .maphead .hint b{font-style:normal;color:var(--bone);font-weight:500}
+  .mapbody{display:grid;grid-template-columns:1.05fr 1fr;gap:18px;align-items:start}
+  .mlabel{font-family:"Cinzel",serif;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--ash-dim);margin:0 0 7px 2px}
+  .plan{display:grid;grid-template-columns:1fr 1.3fr 1.3fr 1fr;grid-template-rows:170px 150px;
+    grid-template-areas:"bath bed bed nur" "kit kit liv liv";border:2px solid #5d4c43;border-radius:5px;background:#0f0c0b;
+    box-shadow:0 18px 40px rgba(0,0,0,.6)}
+  .cell{position:relative;border:1px solid #3b302b;overflow:hidden;cursor:pointer;min-height:0;background:#120e0d}
+  .cell .ph{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.36;filter:saturate(.85);transition:opacity .3s ease}
+  .cell:hover .ph{opacity:.55}
+  .cell::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,8,8,.55),transparent 38%,transparent 55%,rgba(10,8,8,.6));pointer-events:none}
+  .cell .rn{position:absolute;left:9px;top:7px;z-index:2;font-family:"Cinzel",serif;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--bone);text-shadow:0 1px 4px #000}
+  .cell .rs{position:absolute;left:9px;top:21px;z-index:2;font-size:11.5px;color:var(--ash);font-style:italic;text-shadow:0 1px 4px #000}
+  .cell .dz{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end}
+  .cell.mine{box-shadow:inset 0 0 0 2px rgba(236,230,218,.6)}
+  .mapwrap.moving .cell:hover{box-shadow:inset 0 0 0 2px var(--ember-hi)}
+  .door{position:absolute;z-index:4;background:#c8973f;box-shadow:0 0 8px rgba(200,151,63,.8);border-radius:2px;pointer-events:none}
+  .court{margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .court .cell,.grp .cell,.awaygrid .cell{height:96px;border-radius:6px;border-color:#3b302b}
+  .grounds{display:flex;flex-direction:column;gap:12px}
+  .grp .gl{font-family:"Cinzel",serif;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--ash-dim);margin:0 0 5px 2px}
+  .grp .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+  .awaygrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+  .cell.foldcell .ph{background:radial-gradient(ellipse at 50% 60%, #3a2a66, #150f26 60%, #07060b);opacity:.9}
+  .cell.elsewhere{cursor:default}
+  .dot{position:relative;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+    font-family:"Cinzel",serif;font-size:10.5px;font-weight:700;color:#0a0808;cursor:pointer;
+    box-shadow:0 0 0 2px rgba(10,8,8,.85),0 2px 10px rgba(0,0,0,.7);transition:transform .2s ease, box-shadow .2s ease}
+  .dot:hover{transform:scale(1.12)}
+  .dot.selene{background:var(--steel)} .dot.nysera{background:var(--ember-hi)}
+  .dot.mirael{background:var(--violet-hi)} .dot.talia{background:var(--pale-hi)}
+  .dot.adger{background:var(--bone);box-shadow:0 0 0 2px #0a0808,0 0 14px rgba(236,230,218,.75)}
+  .dot.sera{width:19px;height:19px;font-size:8px;background:#e0935a;cursor:default}
+  .dot.virestar{width:22px;height:22px;background:#1f272f;color:#c9d3dd;cursor:default;box-shadow:0 0 0 1px #6f7f8e,0 0 10px rgba(150,170,190,.5)}
+  .dot.virestar svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round}
+  .dot.sel{transform:scale(1.25);box-shadow:0 0 0 2px var(--bone),0 0 16px var(--ember-hi)}
+  .dot .tag{position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%);white-space:nowrap;
+    font-family:"EB Garamond",serif;font-weight:400;font-size:11px;color:var(--bone);background:rgba(10,8,8,.9);
+    border:1px solid var(--edge);padding:1px 6px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s}
+  .dot:hover .tag{opacity:1}
+  .maplegend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ash-dim);align-items:center}
+  .maplegend .dot{transform:scale(.8);cursor:default}
+  @media(max-width:760px){
+    .mapwrap{padding:12px 10px 18px}
+    .mapbody{grid-template-columns:1fr}
+    .plan{grid-template-rows:128px 112px}
+    .court .cell,.grp .cell,.awaygrid .cell{height:84px}
+    .setting .right{margin-left:0;gap:12px}
+    .wx .wl,.ember .et,.ember .el{display:none}
+    /* the board becomes one swipeable line so the conversation keeps the screen */
+    .statebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-right:0}
+    .statebar::-webkit-scrollbar{display:none}
+    .statebar .strow{flex:none}
+    .ember .eb{width:74px}
+    .ember .eb i{background-size:74px 100%}
+  }
+
+  /* ===== THE LOCK ===== */
+  .lock{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:24px;
+    background:radial-gradient(ellipse at 50% 42%, rgba(120,36,24,.28), transparent 60%), #0a0808}
+  .lock[hidden]{display:none}
+  .lockcard{width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+  .lockcard img{width:132px;height:132px;border-radius:50%;box-shadow:0 0 50px rgba(181,57,44,.4)}
+  .empty img.s{display:block;width:78px;height:78px;border-radius:50%;margin:0 auto 14px;opacity:.92;box-shadow:0 0 30px rgba(181,57,44,.3)}
+  .lockcard input[type=password]{width:100%;background:var(--ink);border:1px solid var(--edge);color:var(--bone);
+    font-family:"EB Garamond",serif;font-size:18px;padding:12px 14px;border-radius:9px;text-align:center}
+  .lockcard input[type=password]:focus{outline:none;border-color:var(--ember)}
+  .lockcard .send{width:100%;padding:13px}
+  .lockmsg{min-height:18px;font-size:14px;color:var(--ember-hi);font-style:italic}
+</style>
+</head>
+<body>
+<div class="fg" id="fg">
+  <div class="side">
+    <div class="who" id="wSelene" data-who="selene">
+      <video src="/selene-loop.mp4" autoplay muted loop playsinline preload="auto" onerror="this.style.display='none'"></video>
+      <div class="nm">Selene</div><div class="state">out</div>
+      <select class="locsel" id="loc_selene" data-who="selene"></select>
+    </div>
+    <div class="who" id="wNysera" data-who="nysera">
+      <video src="/nysera-loop.mp4" autoplay muted loop playsinline preload="auto" onerror="this.style.display='none'"></video>
+      <div class="nm">Nysera</div><div class="state">out</div>
+      <select class="locsel" id="loc_nysera" data-who="nysera"></select>
+    </div>
+    <div class="who" id="wMirael" data-who="mirael">
+      <video src="/mirael-loop.mp4" autoplay muted loop playsinline preload="auto" onerror="this.style.display='none'"></video>
+      <div class="nm">Mirael</div><div class="state">out</div>
+      <select class="locsel" id="loc_mirael" data-who="mirael"></select>
+    </div>
+    <div class="who" id="wTalia" data-who="talia">
+      <video src="/talia-loop.mp4" autoplay muted loop playsinline preload="auto" onerror="this.style.display='none'"></video>
+      <div class="nm">Talia</div><div class="state">out</div>
+      <select class="locsel" id="loc_talia" data-who="talia"></select>
+    </div>
+  </div>
+  <div class="main">
+    <div class="scene noart" id="scene" aria-hidden="true">
+      <div class="bg"></div><div class="bg"></div>
+      <div class="fog" id="fog"></div>
+      <canvas id="wx"></canvas>
+      <div class="flash" id="flash"></div>
+      <div class="shade"></div>
+    </div>
+    <div class="rail">
+      <div class="rail-top">
+        <div>
+          <div class="bk">The Forge &middot; The Room</div>
+          <div class="sub" id="sub">all four of them. Tap a face to bring her in or out.</div>
+        </div>
+        <div class="tools">
+          <button class="tool" id="btnMap" title="The lodge and the grounds, and who is where">Map</button>
+          <button class="tool" id="btnAmbient" title="Let them speak up on their own when you go quiet">Ambient: On</button>
+          <button class="tool" id="btnAuto" title="Let them fold the conversation into memory on their own">Auto-save: On</button>
+          <button class="tool" id="btnRemember" title="Save this conversation to their memory">Remember</button>
+          <button class="tool" id="btnNew">New</button>
+        </div>
+      </div>
+      <div class="setting" id="setting">
+        <label for="mySel">You are in</label>
+        <select id="mySel"></select>
+        <span class="callnote" id="callnote"></span>
+        <span class="right">
+          <span class="wx" id="wxChip" hidden></span>
+          <span class="ember" id="ember" hidden title="Adger's ember: how long he can stay manifested. Tap to set it by hand.">
+            <span class="el">Ember</span><span class="eb"><i id="emberFill"></i></span><span class="ev" id="emberVal"></span><span class="et" id="emberTrend"></span>
+          </span>
+        </span>
+      </div>
+    </div>
+    <div class="statebar empty" id="statebar"></div>
+    <div class="thread" id="thread"></div>
+    <div class="whisperbar empty" id="whisperbar"></div>
+    <div class="shots empty" id="shots"></div>
+    <div class="composer">
+      <button class="attach" id="btnAttach" title="Show them a picture">&#128247;</button>
+      <input type="file" id="fileIn" accept="image/*" multiple style="display:none">
+      <textarea id="q" rows="1" placeholder="Say something to them&hellip;"></textarea>
+      <button class="send" id="go">Send</button>
+    </div>
+  </div>
+  <div class="lock" id="lock" hidden>
+    <form class="lockcard" id="lockForm" autocomplete="on">
+      <img src="/room-icon-192.png" alt="">
+      <div class="bk">The Forge &middot; The Room</div>
+      <input type="text" name="username" value="adger" autocomplete="username" hidden>
+      <input type="password" id="lockIn" name="password" autocomplete="current-password" placeholder="Passphrase">
+      <button class="send" type="submit">Open</button>
+      <div class="lockmsg" id="lockMsg"></div>
+    </form>
+  </div>
+  <div class="mapwrap" id="mapwrap" hidden>
+    <div class="map">
+      <div class="maphead">
+        <div>
+          <div class="bk">The Forge valley &middot; who is where</div>
+          <div class="hint" id="maphint"></div>
+        </div>
+        <button class="tool" id="mapClose">Close</button>
+      </div>
+      <div class="mapbody">
+        <section>
+          <div class="mlabel">The lodge</div>
+          <div class="plan" id="plan"></div>
+          <div class="court" id="court"></div>
+          <div class="mlabel" style="margin-top:16px">Away from the valley</div>
+          <div class="awaygrid" id="awaygrid"></div>
+        </section>
+        <section class="grounds" id="grounds"></section>
+      </div>
+      <div class="maplegend" id="maplegend"></div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var ENDPOINT  = "/api/room";
+  var REMEMBER  = "/api/room-remember";
+  /* THE LOCK. The passphrase is typed once per device and kept in this browser only.
+     The server refuses anything without it (once ROOM_KEY is set in Vercel). */
+  var KEY_STORE = "room-key-v1", roomKey = "", lockShown = false;
+  try{ roomKey = localStorage.getItem(KEY_STORE) || ""; }catch(e){ roomKey = ""; }
+  function hdrs(){ var h={'Content-Type':'application/json'}; if(roomKey) h['x-room-key']=roomKey; return h; }
+  function badKey(){ return roomKey ? 'That passphrase did not open it.' : ''; }
+  function showLock(msg){
+    lockShown=true; if(typeof stopIdle==='function') stopIdle();
+    document.getElementById('lock').hidden=false;
+    document.getElementById('lockMsg').textContent=msg||'';
+    setTimeout(function(){ var i=document.getElementById('lockIn'); if(i){ i.value=''; i.focus(); } }, 60);
+  }
+  function hideLock(){ lockShown=false; document.getElementById('lock').hidden=true; }
+  var STORE_KEY = "room-sim-v1";
+  var PRES_KEY  = "room-present-v1";
+  var WOMEN = ["selene","nysera","mirael","talia"];
+  var LABEL = { selene:"Selene", nysera:"Nysera", mirael:"Mirael", talia:"Talia" };
+  var IDLE_MS = 75000, MAX_AMBIENT_STREAK = 2, AMB_KEY = "room-ambient-v1";
+  var AUTO_KEY = "room-autosave-v1", SAVED_KEY = "room-saved-at-v1";
+  var AUTO_QUIET_MS = 180000;   // fold in after 3 quiet minutes
+  var AUTO_MIN_TURNS = 4;       // but only if there is something new worth keeping
+  var TZ_FORGE = 'Europe/Athens';
+  var PLACES = [
+    {v:'the Forge',                                   tz:TZ_FORGE, label:'The Forge'},
+    {v:'the master bedroom in the lodge',             tz:TZ_FORGE, label:'Master bedroom'},
+    {v:'the master bathroom in the lodge',            tz:TZ_FORGE, label:'Master bathroom'},
+    {v:'the nursery in the lodge',                    tz:TZ_FORGE, label:'Nursery'},
+    {v:'the main kitchen in the lodge',               tz:TZ_FORGE, label:'Kitchen'},
+    {v:'the main living room in the lodge',           tz:TZ_FORGE, label:'Living room'},
+    {v:'the courtyard outside the lodge',             tz:TZ_FORGE, label:'Lodge courtyard'},
+    {v:'the conference room at HQ',                   tz:TZ_FORGE, label:'Conference room'},
+    {v:'the CEO office at HQ',                        tz:TZ_FORGE, label:'CEO office'},
+    {v:'the security office at HQ',                   tz:TZ_FORGE, label:'Security office'},
+    {v:'the Forge rooftop, atop the stage',           tz:TZ_FORGE, label:'Rooftop'},
+    {v:'the Forge tavern in the Village',             tz:TZ_FORGE, label:'The tavern'},
+    {v:'the coffee shop in the Village',              tz:TZ_FORGE, label:'Coffee shop'},
+    {v:'the square in the Village',                   tz:TZ_FORGE, label:'Village square'},
+    {v:'the Forge hot springs',                       tz:TZ_FORGE, label:'Hot springs'},
+    {v:'the recording studio at the Forge',           tz:TZ_FORGE, label:'The studio'},
+    {v:'the tour bus, on the road',                   tz:TZ_FORGE, label:'Tour bus'},
+    {v:'the jet, SFS2026, in flight',                 tz:TZ_FORGE, label:'The jet'},
+    {v:'the yacht, Little Shadow',                    tz:TZ_FORGE, label:'The yacht'},
+    {v:'the fold',                                    tz:TZ_FORGE, label:'The fold'},
+    {v:'__custom__',                                  tz:TZ_FORGE, label:'Elsewhere\u2026'}
+  ];
+  var CITIES = [
+    {v:'Berlin',        tz:'Europe/Berlin'},
+    {v:'Bonn',          tz:'Europe/Berlin'},
+    {v:'Munich',        tz:'Europe/Berlin'},
+    {v:'Hamburg',       tz:'Europe/Berlin'},
+    {v:'Paris',         tz:'Europe/Paris'},
+    {v:'Warsaw',        tz:'Europe/Warsaw'},
+    {v:'Prague',        tz:'Europe/Prague'},
+    {v:'Vienna',        tz:'Europe/Vienna'},
+    {v:'Budapest',      tz:'Europe/Budapest'},
+    {v:'Amsterdam',     tz:'Europe/Amsterdam'},
+    {v:'Copenhagen',    tz:'Europe/Copenhagen'},
+    {v:'Stockholm',     tz:'Europe/Stockholm'},
+    {v:'Gothenburg',    tz:'Europe/Stockholm'},
+    {v:'Oslo',          tz:'Europe/Oslo'},
+    {v:'Helsinki',      tz:'Europe/Helsinki'},
+    {v:'Madrid',        tz:'Europe/Madrid'},
+    {v:'Barcelona',     tz:'Europe/Madrid'},
+    {v:'Lisbon',        tz:'Europe/Lisbon'},
+    {v:'Rome',          tz:'Europe/Rome'},
+    {v:'Milan',         tz:'Europe/Rome'},
+    {v:'Dublin',        tz:'Europe/Dublin'},
+    {v:'London',        tz:'Europe/London'},
+    {v:'Athens, Greece',tz:'Europe/Athens'},
+    {v:'Bucharest',     tz:'Europe/Bucharest'},
+    {v:'Los Angeles',   tz:'America/Los_Angeles'},
+    {v:'New York',      tz:'America/New_York'},
+    {v:'Mexico City',   tz:'America/Mexico_City'},
+    {v:'Sao Paulo',     tz:'America/Sao_Paulo'},
+    {v:'Tokyo',         tz:'Asia/Tokyo'},
+    {v:'Sydney',        tz:'Australia/Sydney'}
+  ];
+  var MY_PLACES = [{v:'Greece', tz:'Europe/Athens'}];  // plus every PLACES entry and every CITY, built at init
+
+  var thread=document.getElementById('thread'), qEl=document.getElementById('q'),
+      go=document.getElementById('go'), subEl=document.getElementById('sub');
+  var portraits={};
+  WOMEN.forEach(function(w){ portraits[w]=document.getElementById('w'+LABEL[w]); });
+
+  var history=[], busy=false;
+  var idleTimer=null, ambientStreak=0, ambientOn=true;
+  var autoTimer=null, autoOn=true, autoSaving=false, savedAt=0;
+  var present={}, lastSent={};
+  var places={}, me={place:'Greece', tz:'Europe/Athens'}, whisperTo=null;
+  var pending=[];   // images staged for the next message
+
+  /* ===== ROOM STATE =====
+     The server returns state on every reply. We never call /api/state from here,
+     so no admin key ever touches this page. Last known state is cached locally
+     purely so the strip is not blank before the first message of a session. */
+  var STATE_KEY_LOCAL = "room-state-v1";
+  var STATE_ORDER = ["selene","nysera","mirael","talia","sera","adger","virestar"];
+  var STATE_LABEL = { selene:"Selene", nysera:"Nysera", mirael:"Mirael", talia:"Talia", sera:"Sera", adger:"Adger", virestar:"Virestar" };
+  var roomState = null;
+
+  function saveRoomState(){
+    try{ localStorage.setItem(STATE_KEY_LOCAL, JSON.stringify(roomState)); }catch(e){}
+  }
+  function loadRoomState(){
+    try{ var r=localStorage.getItem(STATE_KEY_LOCAL); if(r) roomState=JSON.parse(r); }catch(e){ roomState=null; }
+  }
+  /* matches the server: an activity older than this is over */
+  var STALE_MS = 10*3600*1000;
+  function isOld(iso){ var t=Date.parse(iso||''); return isNaN(t) || (Date.now()-t) > STALE_MS; }
+  function ageLabel(iso){
+    var t=Date.parse(iso||''); if(isNaN(t)) return '';
+    var m=Math.max(0,Math.floor((Date.now()-t)/60000));
+    if(m<2) return 'just now';
+    if(m<60) return m+' min ago';
+    var h=Math.floor(m/60); if(h<24) return h+(h===1?' hr ago':' hrs ago');
+    var dd=Math.round(h/24); return dd+(dd===1?' day ago':' days ago');
+  }
+  function renderState(changedKeys){
+    var bar=document.getElementById('statebar');
+    if(!bar) return;
+    if(!roomState || !roomState.people){ bar.className='statebar empty'; bar.innerHTML=''; return; }
+    bar.className='statebar';
+    bar.innerHTML='';
+    var lab=document.createElement('span'); lab.className='sl'; lab.textContent='State';
+    bar.appendChild(lab);
+    var changed={}; (changedKeys||[]).forEach(function(k){ changed[k]=true; });
+    STATE_ORDER.forEach(function(k){
+      var p=roomState.people[k];
+      if(!p) return;
+      var row=document.createElement('span');
+      var thing = (k==='sera' || k==='virestar');
+      var old = !thing && isOld(p.at);
+      row.className='strow st-'+k+(p.absent?' gone':'')+(old?' old':'')+(changed[k]?' flash':'');
+      var n=document.createElement('span'); n.className='n'; n.textContent=STATE_LABEL[k];
+      var w=document.createElement('span'); w.className='w'; w.textContent=p.where?shortLabel(p.where):'';
+      var d=document.createElement('span'); d.className='d'; d.textContent=p.doing||'';
+      row.appendChild(n); row.appendChild(w); row.appendChild(d);
+      var ag = k==='virestar' ? '' : (k==='sera' && p.auto) ? 'her routine' : ageLabel(p.at);
+      if(ag || (k!=='virestar' && p.since && p.since!=='unknown')){
+        var t=document.createElement('span'); t.className='t';
+        t.textContent = ag || p.since;
+        t.title = p.since || '';
+        row.appendChild(t);
+      }
+      bar.appendChild(row);
+    });
+    if(changedKeys && changedKeys.length){
+      setTimeout(function(){
+        var rows=bar.querySelectorAll('.strow.flash');
+        for(var i=0;i<rows.length;i++){ rows[i].classList.remove('flash'); }
+      }, 60);
+    }
+  }
+  /* Called with whatever the room sent back. Ignores a null state (Redis down) so
+     the strip keeps showing the last good picture rather than going blank. */
+  function applyStateFromReply(data, noAdopt){
+    if(!data || !data.state || !data.state.people) return;
+    roomState = data.state;
+    saveRoomState();
+    // when a woman moves herself in the story, her picker and her badge follow,
+    // so the next message sends where she really is
+    var moved=false;
+    WOMEN.forEach(function(w){
+      if(noAdopt) return;
+      var s=data.state.people[w]; if(!s || !s.where) return;
+      if(s.where===((places[w]||{}).place)) return;
+      var known=PLACES.filter(function(x){return x.v===s.where;})[0];
+      var city=CITIES.filter(function(x){return x.v===s.where;})[0];
+      places[w]={place:s.where, tz:(known?known.tz:(city?city.tz:TZ_FORGE))};
+      var sel=document.getElementById('loc_'+w);
+      if(sel){ if(known) sel.value=s.where; else if(city) sel.value='city:'+s.where; else buildLocationsRefresh(w); }
+      moved=true;
+    });
+    if(moved){ savePlaces(); renderHereBadges(); renderCallNote(); }
+    if(mapOpen) renderMap();
+    var changed=[];
+    if(Array.isArray(data.stateChanges)){
+      data.stateChanges.forEach(function(c){ if(c && c.who) changed.push(c.who); });
+    }
+    renderState(changed);
+  }
+
+  function saveHist(){
+    try{
+      // don't persist base64 images - they blow the localStorage quota; keep a marker instead
+      var slim=history.map(function(m){
+        var o={role:m.role, content:m.content};
+        if(m.whisperTo) o.whisperTo=m.whisperTo;
+        if(m.images && m.images.length) o.shown=m.images.length;
+        return o;
+      });
+      localStorage.setItem(STORE_KEY, JSON.stringify(slim));
+    }catch(e){}
+  }
+  function loadHist(){
+    try{ var r=localStorage.getItem(STORE_KEY); if(r) history=JSON.parse(r)||[]; }catch(e){ history=[]; }
+    // scrub beats out of anything already stored, so an old session cannot
+    // reseed the pattern the moment it is sent back as context
+    var dirty=false;
+    history.forEach(function(m){
+      if(m.role!=='assistant' || typeof m.content!=='string') return;
+      var c=stripBeats(m.content);
+      if(c!==m.content){ m.content=c; dirty=true; }
+    });
+    if(dirty) saveHist();
+  }
+  function savePres(){ try{ localStorage.setItem(PRES_KEY, JSON.stringify(present)); }catch(e){} }
+  function loadPres(){
+    try{ var r=localStorage.getItem(PRES_KEY); if(r){ var p=JSON.parse(r)||{}; WOMEN.forEach(function(w){ present[w]=!!p[w]; }); return; } }catch(e){}
+    WOMEN.forEach(function(w){ present[w]=true; });
+  }
+
+  function presentList(){ return WOMEN.filter(function(w){ return present[w]; }); }
+  function renderPortraits(){
+    WOMEN.forEach(function(w){
+      portraits[w].classList.toggle('out', !present[w]);
+      if(!present[w]) portraits[w].classList.remove('live');
+    });
+    var n=presentList().length;
+    subEl.textContent = n===0 ? "no one's in the room. Tap a face to bring her in."
+      : n===4 ? "all four of them. Tap a face to bring her in or out."
+      : presentList().map(function(w){return LABEL[w];}).join(", ") + " in the room. Tap to change.";
+  }
+  function live(who){ WOMEN.forEach(function(w){ portraits[w].classList.toggle('live', w===who && present[w]); }); }
+  function scroll(){ thread.scrollTop = thread.scrollHeight; }
+  function histPayload(){ return history.map(function(m){ var o={role:m.role, content:m.content};
+    if(m.whisperTo) o.whisperTo=m.whisperTo;
+    if(m.images && m.images.length) o.images=m.images.map(function(im){ return {media_type:im.media_type, data:im.data}; });
+    return o; }); }
+  function placesPayload(){ var o={}; WOMEN.forEach(function(w){ o[w]=places[w]||{place:'the Forge',tz:TZ_FORGE}; }); return o; }
+
+  /* Model returns a scene: lines prefixed SELENE:/NYSERA:/MIRAEL:/TALIA:, optionally NAME [mood]:. Split it. */
+  function parseScene(text){
+    var out=[], cur=null;
+    String(text).split("\n").forEach(function(line){
+      var m = line.match(/^\s*(SELENE|NYSERA|MIRAEL|TALIA)\s*(?:\[([a-z]+)\])?\s*:\s*(.*)$/i);
+      if(m){ if(cur) out.push(cur); cur={ who:m[1].toLowerCase(), mood:(m[2]||'').toLowerCase(), text:m[3] }; }
+      else if(cur && line.trim()){ cur.text += "\n" + line; }
+    });
+    if(cur) out.push(cur);
+    if(!out.length){ var first=presentList()[0]||'selene'; out.push({who:first, mood:'', text:String(text).trim()}); }
+    return out.map(function(b){ b.text=stripBeats(b.text); return b; }).filter(function(b){ return b.text; });
+  }
+
+  /* Beats and inline stage directions are banned in the DIRECTOR now, but the
+     stored transcript still carries old ones, and anything in history gets fed
+     back every turn - which is exactly how the loop built in the first place.
+     Strip them on the way in so they never re-enter context. */
+  function stripBeats(text){
+    var t = String(text || "");
+    // asterisk actions: *a beat*, *soft, low, gone*, *and she reads it again*
+    t = t.replace(/\*[^*\n]{0,200}\*/g, " ");
+    // bare ellipsis-led beats left behind once the asterisks are gone
+    t = t.replace(/(^|\s)\.\.\.(\s|$)/g, " ");
+    // parenthetical time-markers: (a beat), (a pause), (silence)
+    t = t.replace(/\((?:\s*(?:a|the)\s+)?(?:beat|pause|moment|silence|breath)[^)]{0,40}\)/gi, " ");
+    // collapse the wreckage
+    t = t.replace(/[ \t]{2,}/g, " ");
+    t = t.replace(/ +([,.;:!?])/g, "$1");
+    t = t.replace(/([,.;:])\1+/g, "$1");
+    // a sentence end followed straight by a new one needs its space back
+    t = t.replace(/([.!?,;:])(?=[^\s.!?,;:\n])/g, "$1 ");
+    // a quote mark orphaned by a stripped action, e.g.  ". "  or  " ."
+    t = t.replace(/(["\u201c\u201d])\s*\.\s*(?=["\u201c\u201d]|$|\s)/g, "$1 ");
+    t = t.replace(/\s+(["\u201d])(?=[\s.,;:!?]|$)/g, "$1");
+    t = t.replace(/[ \t]{2,}/g, " ");
+    t = t.replace(/\s+\n/g, "\n");
+    t = t.replace(/\n{3,}/g, "\n\n");
+    t = t.replace(/^[\s.,;:]+/, "");
+    return t.trim();
+  }
+
+  /* Keep only lines from women who are actually present; drop any stray absent speaker. */
+  function sceneFor(reply, allowed){
+    var allow={}; (allowed||[]).forEach(function(w){ allow[w]=true; });
+    var blocks=parseScene(reply).filter(function(b){ return allow[b.who]; });
+    if(!blocks.length){ var raw=parseScene(reply); var t=raw[0]?raw[0].text:String(reply).trim(); var who=(allowed&&allowed[0])||'selene'; blocks=[{who:who, mood:'', text:t}]; }
+    return blocks;
+  }
+  function blocksToText(blocks){ return blocks.map(function(b){ var n=(LABEL[b.who]||b.who).toUpperCase(); return n + (b.mood?' ['+b.mood+']':'') + ': ' + b.text; }).join('\n'); }
+
+  function bubble(cls, label, text, mood){
+    var m=document.createElement('div'); m.className='msg '+cls;
+    var l=document.createElement('div'); l.className='lbl'; l.textContent=label;
+    var t=document.createElement('div'); t.className='txt'; if(mood) t.classList.add('m-'+mood); t.textContent=text||'';
+    m.appendChild(l); m.appendChild(t); thread.appendChild(m); scroll();
+    return t;
+  }
+  function bubbleWhisper(text, who){
+    var m=document.createElement('div'); m.className='msg me whisper';
+    var tag=document.createElement('div'); tag.className='wtag'; tag.textContent='whispered to '+(LABEL[who]||who);
+    var t=document.createElement('div'); t.className='txt'; t.textContent=text||'';
+    m.appendChild(tag); m.appendChild(t); thread.appendChild(m); scroll();
+  }
+  function bubbleWithShots(m){
+    var d=document.createElement('div'); d.className='msg me'+(m.whisperTo?' whisper':'');
+    if(m.whisperTo){ var tg=document.createElement('div'); tg.className='wtag'; tg.textContent='whispered to '+(LABEL[m.whisperTo]||m.whisperTo); d.appendChild(tg); }
+    if(m.images && m.images.length){
+      var st=document.createElement('div'); st.className='shots-in';
+      m.images.forEach(function(im){ var i=document.createElement('img'); i.src='data:'+im.media_type+';base64,'+im.data; st.appendChild(i); });
+      d.appendChild(st);
+    }
+    if(m.content){ var t=document.createElement('div'); t.className='txt'; t.textContent=m.content; d.appendChild(t); }
+    thread.appendChild(d); scroll();
+  }
+
+  function renderShots(){
+    var box=document.getElementById('shots'), btn=document.getElementById('btnAttach');
+    box.innerHTML='';
+    if(!pending.length){ box.className='shots empty'; btn.classList.remove('has'); return; }
+    box.className='shots'; btn.classList.add('has');
+    pending.forEach(function(im, idx){
+      var d=document.createElement('div'); d.className='shot';
+      var i=document.createElement('img'); i.src='data:'+im.media_type+';base64,'+im.data;
+      var x=document.createElement('div'); x.className='x'; x.textContent='\u00d7';
+      x.addEventListener('click', function(){ pending.splice(idx,1); renderShots(); });
+      d.appendChild(i); d.appendChild(x); box.appendChild(d);
+    });
+  }
+  function addFiles(files){
+    var list=Array.prototype.slice.call(files||[]).slice(0, 4-pending.length);
+    list.forEach(function(f){
+      if(!f.type || f.type.indexOf('image/')!==0) return;
+      if(f.size > 4*1024*1024){ bubble('note','Note','That image is too big (keep it under 4MB).'); return; }
+      var r=new FileReader();
+      r.onload=function(){
+        var res=String(r.result||''); var i=res.indexOf(',');
+        if(i<0) return;
+        pending.push({ media_type: f.type, data: res.slice(i+1) });
+        renderShots();
+      };
+      r.readAsDataURL(f);
+    });
+  }
+
+  function render(){
+    thread.innerHTML='';
+    if(!history.length){
+      var e=document.createElement('div'); e.className='empty';
+      e.innerHTML='<img class="s" src="/room-icon-192.png" alt=""><p>They\'re here. Tap a face on the left to bring her into the room or send her out, then say something.</p>'+
+        '<div class="hint">Call her Red and Nysera turns. Call her little shadow and Selene does. Talia speaks least of all, so when she does, it lands.</div>';
+      thread.appendChild(e); return;
+    }
+    history.forEach(function(m){
+      if(m.role==='user'){ if(m.images && m.images.length) bubbleWithShots(m); else if(m.whisperTo) bubbleWhisper(m.content, m.whisperTo); else bubble('me','You', m.content); return; }
+      parseScene(m.content).forEach(function(b){ bubble(b.who, LABEL[b.who]||'\u00b7', b.text, b.mood); });
+    });
+    scroll();
+  }
+  function typing(on){
+    var ex=document.getElementById('tp'); if(ex) ex.remove();
+    if(on){
+      var m=document.createElement('div'); m.id='tp'; m.className='msg nysera';
+      m.innerHTML='<div class="dots"><span></span><span></span><span></span></div>';
+      thread.appendChild(m); scroll();
+    }
+  }
+
+  /* Stream each speaker's line in turn, lighting whoever is talking. */
+  function playScene(blocks, done){
+    var i=0;
+    (function next(){
+      if(i>=blocks.length){ live(null); done&&done(); return; }
+      var b=blocks[i++];
+      live(b.who);
+      var node=bubble(b.who, LABEL[b.who]||'\u00b7', '', b.mood);
+      var parts=b.text.split(/(\s+)/), j=0;
+      (function step(){
+        if(j>=parts.length){ setTimeout(next, 420); return; }
+        var w=parts[j++]; node.textContent+=w; scroll();
+        var last=w.slice(-1), d=24+Math.random()*30;
+        if(/[.!?]/.test(last)) d=210; else if(/[,;:\u2014]/.test(last)) d=120;
+        setTimeout(step, d);
+      })();
+    })();
+  }
+
+  async function remember(){
+    if(!history.length) return;
+    try{
+      var rr=await fetch(REMEMBER,{method:'POST',cache:'no-store',headers:hdrs(),
+        body: JSON.stringify({
+          present: presentList(),
+          messages: history.map(function(m){ return {role:m.role, content:m.content}; })
+        })});
+      if(rr.status===401){ showLock(badKey()); return; }
+      savedAt = history.length;
+      try{ localStorage.setItem(SAVED_KEY, String(savedAt)); }catch(e){}
+    }catch(e){}
+  }
+
+  /* AUTO-REMEMBER: fold the conversation into memory on its own, so nothing is
+     lost when a session just ends. Fires after a quiet spell, and as a backstop
+     when the page is hidden or closed. Never fires if nothing new was said. */
+  function unsaved(){ return history.length - savedAt; }
+  function stopAutoSave(){ if(autoTimer){ clearTimeout(autoTimer); autoTimer=null; } }
+  function scheduleAutoSave(){
+    stopAutoSave();
+    if(!autoOn) return;
+    if(unsaved() < AUTO_MIN_TURNS) return;
+    autoTimer = setTimeout(async function(){
+      if(busy || !autoOn || unsaved() < AUTO_MIN_TURNS) return;
+      autoSaving = true; renderAutoBtn();
+      await remember();
+      autoSaving = false; renderAutoBtn();
+    }, AUTO_QUIET_MS);
+  }
+  function flushOnLeave(){
+    if(!autoOn || unsaved() < AUTO_MIN_TURNS) return;
+    try{
+      var payload = JSON.stringify({
+        present: presentList(),
+        messages: history.map(function(m){ return {role:m.role, content:m.content}; })
+      });
+      // keepalive lets the request finish after the page goes away. sendBeacon was
+      // used here before, but beacons send credentials, and the endpoint does not
+      // return Access-Control-Allow-Credentials, so every one of them was blocked
+      // by CORS and silently lost the tail of the session.
+      fetch(REMEMBER, {
+        method:'POST',
+        headers:hdrs(),
+        body: payload,
+        keepalive: true,
+        cache: 'no-store'
+      }).catch(function(){});
+      savedAt = history.length;
+      try{ localStorage.setItem(SAVED_KEY, String(savedAt)); }catch(e){}
+    }catch(e){}
+  }
+  function renderAutoBtn(){
+    var b=document.getElementById('btnAuto');
+    if(!b) return;
+    b.textContent = autoSaving ? 'Saving\u2026' : ('Auto-save: '+(autoOn?'On':'Off'));
+    b.classList.toggle('on', autoOn);
+  }
+
+  function stopIdle(){ if(idleTimer){ clearTimeout(idleTimer); idleTimer=null; } }
+  function scheduleIdle(){ stopIdle(); if(ambientOn) idleTimer=setTimeout(ambientBeat, IDLE_MS); }
+  function renderAmbientBtn(){ var b=document.getElementById('btnAmbient'); if(b) b.textContent='Ambient: '+(ambientOn?'On':'Off'); }
+
+  async function ambientBeat(){
+    idleTimer=null;
+    if(lockShown) return;
+    if(busy || !ambientOn || document.hidden){ scheduleIdle(); return; }
+    var pl=presentList();
+    if(!pl.length) return;                     // no one here; wait for a toggle or a word
+    if(ambientStreak>=MAX_AMBIENT_STREAK) return; // they've stirred enough; wait for Adger
+    busy=true; go.disabled=true;
+    var ambEpoch=pickEpoch;
+    try{
+      var res=await fetch(ENDPOINT,{method:'POST',cache:'no-store',headers:hdrs(),
+        body: JSON.stringify({ present: pl, ambient:true, places: placesPayload(), me: me, messages: histPayload() })});
+      if(res.status===401){ busy=false; go.disabled=false; showLock(badKey()); return; }
+      if(!res.ok) throw new Error('ambient '+res.status);
+      var data=await res.json();
+      applyStateFromReply(data, ambEpoch!==pickEpoch); applyExtras(data);
+      var reply=(data && data.reply) || '';
+      if(reply){
+        var blocks=sceneFor(reply, pl);
+        history.push({role:'assistant', content:blocksToText(blocks)}); saveHist(); ambientStreak++;
+        playScene(blocks, function(){ busy=false; go.disabled=false; scheduleIdle(); scheduleAutoSave(); });
+      } else { busy=false; go.disabled=false; scheduleIdle(); scheduleAutoSave(); }
+    }catch(e){ busy=false; go.disabled=false; } // stay silent on ambient failure
+  }
+
+  async function send(){
+    var text=(qEl.value||'').trim(); if((!text && !pending.length)||busy) return;
+    var pl=presentList();
+    if(!pl.length){ bubble('note','Note',"No one's in the room. Tap a face on the left to bring someone in."); return; }
+    stopIdle(); ambientStreak=0;
+
+    // toggle deltas since the room last heard from us
+    var left=[], entered=[];
+    WOMEN.forEach(function(w){
+      if(lastSent[w] && !present[w]) left.push(w);
+      if(!lastSent[w] && present[w]) entered.push(w);
+    });
+
+    var shots = pending.slice(); pending=[]; renderShots();
+    history.push({role:'user', content:text, whisperTo:(whisperTo||undefined), images:(shots.length?shots:undefined)});
+    qEl.value=''; render(); saveHist();
+    busy=true; go.disabled=true; typing(true);
+    var sentEpoch=pickEpoch;
+    try{
+      var res=await fetch(ENDPOINT,{method:'POST',cache:'no-store',headers:hdrs(),
+        body: JSON.stringify({
+          present: pl, left: left, entered: entered, places: placesPayload(), me: me,
+          messages: histPayload()
+        })});
+      lastSent = Object.assign({}, present);
+      if(res.status===401){
+        typing(false); history.pop(); saveHist(); render();
+        qEl.value=text; pending=shots; renderShots();
+        busy=false; go.disabled=false; showLock(badKey()); return;
+      }
+      if(!res.ok){
+        var errText=''; try{ var ed=await res.json(); errText=ed.detail||ed.error||''; }catch(e){}
+        throw new Error((res.status)+(errText? ': '+errText : ''));
+      }
+      var data=await res.json();
+      applyStateFromReply(data, sentEpoch!==pickEpoch); applyExtras(data);
+      var reply=(data && data.reply) || '';
+      if(!reply) throw new Error('Empty reply');
+      typing(false);
+      var blocks=sceneFor(reply, pl);
+      history.push({role:'assistant', content:blocksToText(blocks)}); saveHist();
+      playScene(blocks, function(){ busy=false; go.disabled=false; qEl.focus(); scheduleIdle(); scheduleAutoSave(); });
+    }catch(err){
+      typing(false); live(null);
+      bubble('note','Note', "Couldn't reach them ("+(err.message||'error')+").");
+      busy=false; go.disabled=false;
+    }
+  }
+
+  // portrait toggles
+  WOMEN.forEach(function(w){
+    portraits[w].addEventListener('click', function(){
+      present[w]=!present[w]; savePres(); renderPortraits(); renderWhisperBar(); renderCallNote();
+    });
+  });
+
+  // whisper bar: chips for present women; tap to whisper your next line to just her
+  function updateComposerWhisper(){
+    var comp=document.querySelector('.composer');
+    if(whisperTo){ comp.classList.add('whisper'); qEl.placeholder='Whisper to '+LABEL[whisperTo]+'\u2026'; }
+    else { comp.classList.remove('whisper'); qEl.placeholder='Say something to them\u2026'; }
+  }
+  function renderWhisperBar(){
+    var bar=document.getElementById('whisperbar'); var pl=presentList();
+    if(whisperTo && pl.indexOf(whisperTo)===-1) whisperTo=null;
+    bar.innerHTML='';
+    if(pl.length<1){ bar.className='whisperbar empty'; updateComposerWhisper(); return; }
+    bar.className='whisperbar';
+    var lab=document.createElement('span'); lab.className='wl'; lab.textContent='Whisper to'; bar.appendChild(lab);
+    pl.forEach(function(w){
+      var c=document.createElement('span'); c.className='wchip'+(whisperTo===w?' on':''); c.textContent=LABEL[w];
+      c.addEventListener('click', function(){ whisperTo = (whisperTo===w? null : w); renderWhisperBar(); qEl.focus(); });
+      bar.appendChild(c);
+    });
+    updateComposerWhisper();
+  }
+
+  // per-woman locations + my location
+  var LOC_KEY = "room-places-v1";
+  function savePlaces(){ try{ localStorage.setItem(LOC_KEY, JSON.stringify({places:places, me:me})); }catch(e){} }
+  function loadPlaces(){
+    try{ var r=localStorage.getItem(LOC_KEY); if(r){ var d=JSON.parse(r)||{};
+      if(d.places) places=d.places; if(d.me) me=d.me; } }catch(e){}
+    WOMEN.forEach(function(w){ if(!places[w]) places[w]={place:'the Forge', tz:TZ_FORGE}; });
+    if(!me.place) me={place:'Greece', tz:'Europe/Athens'};
+  }
+  function shortLabel(p){
+    for(var i=0;i<PLACES.length;i++){ if(PLACES[i].v===p) return PLACES[i].label; }
+    return p.length>16 ? p.slice(0,15)+'\u2026' : p;
+  }
+  function renderHereBadges(){
+    WOMEN.forEach(function(w){
+      var el=portraits[w], b=el.querySelector('.here');
+      if(!b){ b=document.createElement('div'); b.className='here'; el.appendChild(b); }
+      b.textContent = shortLabel((places[w]||{}).place||'the Forge');
+    });
+  }
+  var ADJACENT = [['master bedroom','master bathroom'],['master bedroom','nursery']];
+  function adjacent(a,b){
+    a=String(a).toLowerCase(); b=String(b).toLowerCase();
+    for(var i=0;i<ADJACENT.length;i++){
+      var p=ADJACENT[i];
+      if((a.indexOf(p[0])>-1 && b.indexOf(p[1])>-1) || (a.indexOf(p[1])>-1 && b.indexOf(p[0])>-1)) return true;
+    }
+    return false;
+  }
+  function zoneOf(p){
+    p=String(p||'').toLowerCase();
+    if(p.indexOf('the fold')>-1) return 'fold';
+    if(p.indexOf('in the lodge')>-1) return 'lodge';
+    if(p==='the forge'||p.indexOf('at hq')>-1||p.indexOf('forge rooftop')>-1||p.indexOf('forge tavern')>-1||
+       p.indexOf('forge hot springs')>-1||p.indexOf('recording studio at the forge')>-1||
+       p.indexOf('in the village')>-1||p.indexOf('outside the lodge')>-1) return 'grounds';
+    return 'away';
+  }
+  function relation(p, mine){
+    p=String(p||'').toLowerCase(); mine=String(mine||'').toLowerCase();
+    if(p===mine) return 'with';
+    if(adjacent(p,mine)) return 'door';
+    var a=zoneOf(p), b=zoneOf(mine);
+    if(a==='fold'||b==='fold') return 'far';
+    if(a==='lodge'&&b==='lodge') return 'house';
+    return 'far';
+  }
+  /* together: everyone is with you or through the door.
+     around the lodge: someone is in another room of the house.
+     on a call: someone is out of earshot. */
+  function callState(){
+    var pl=presentList(); if(!pl.length) return '';
+    var s='together';
+    pl.forEach(function(w){
+      var r=relation(((places[w]||{}).place||'the Forge'), me.place||'');
+      if(r==='far') s='call';
+      else if(r==='house' && s!=='call') s='house';
+    });
+    return s;
+  }
+  function isCall(){ return callState()==='call'; }
+  function renderCallNote(){
+    var n=document.getElementById('callnote');
+    if(!n) return;
+    var s=callState();
+    if(zoneOf(me.place)==='fold'){ n.textContent = s ? '\u00b7 from the fold' : ''; return; }
+    n.textContent = !s ? '' : s==='call' ? '\u00b7 on a call' : s==='house' ? '\u00b7 around the lodge' : '\u00b7 together';
+  }
+  function buildLocations(){
+    // my location - Greece, plus every place they can be, plus cities, plus custom
+    var mySel=document.getElementById('mySel');
+    MY_PLACES.forEach(function(p){ var o=document.createElement('option'); o.value=p.v; o.textContent=p.v; mySel.appendChild(o); });
+    PLACES.forEach(function(p){
+      if(p.v==='__custom__') return;
+      var o=document.createElement('option'); o.value=p.v; o.textContent=p.label; mySel.appendChild(o);
+    });
+    CITIES.forEach(function(c){ var o=document.createElement('option'); o.value='city:'+c.v; o.textContent=c.v; mySel.appendChild(o); });
+    var oc=document.createElement('option'); oc.value='__custom__'; oc.textContent='Elsewhere\u2026'; mySel.appendChild(oc);
+
+    function setMySel(){
+      var cur=me.place;
+      var known = MY_PLACES.filter(function(p){return p.v===cur;})[0] || PLACES.filter(function(p){return p.v===cur;})[0];
+      var city  = CITIES.filter(function(c){return c.v===cur;})[0];
+      if(known){ mySel.value=cur; }
+      else if(city){ mySel.value='city:'+cur; }
+      else {
+        var ex=mySel.querySelector('option[data-custom]'); if(ex) ex.remove();
+        var o=document.createElement('option'); o.value=cur; o.textContent=shortLabel(cur); o.setAttribute('data-custom','1');
+        mySel.appendChild(o); mySel.value=cur;
+      }
+    }
+    setMySel();
+    syncMySel = setMySel;
+
+    mySel.addEventListener('change', function(){
+      var v=mySel.value;
+      if(v==='__custom__'){
+        var typed=prompt('Where are you?', me.place||'');
+        if(typed && typed.trim()) me={place:typed.trim(), tz:me.tz||'Europe/Athens'};
+        setMySel();
+      } else if(v.indexOf('city:')===0){
+        var name=v.slice(5), c=CITIES.filter(function(x){return x.v===name;})[0];
+        me={place:c.v, tz:c.tz};
+      } else {
+        var f=MY_PLACES.filter(function(p){return p.v===v;})[0] || PLACES.filter(function(p){return p.v===v;})[0];
+        me={place:v, tz:(f?f.tz:'Europe/Athens')};
+      }
+      localMove(); savePlaces(); renderCallNote(); setScene(me.place); schedulePeek(); if(mapOpen) renderMap();
+    });
+
+    // each woman's location
+    WOMEN.forEach(function(w){
+      var sel=document.getElementById('loc_'+w);
+      PLACES.forEach(function(p){ var o=document.createElement('option'); o.value=p.v; o.textContent=p.label; sel.appendChild(o); });
+      CITIES.forEach(function(c){ var o=document.createElement('option'); o.value='city:'+c.v; o.textContent=c.v; sel.appendChild(o); });
+      var cur=(places[w]||{}).place||'the Forge';
+      var match=PLACES.filter(function(p){return p.v===cur;})[0];
+      var city=CITIES.filter(function(c){return c.v===cur;})[0];
+      sel.value = match ? cur : (city ? 'city:'+cur : cur);
+      if(!match && !city){ var o=document.createElement('option'); o.value=cur; o.textContent=shortLabel(cur); sel.appendChild(o); sel.value=cur; }
+
+      sel.addEventListener('click', function(e){ e.stopPropagation(); });   // don't toggle presence
+      sel.addEventListener('change', function(e){
+        e.stopPropagation();
+        var v=sel.value;
+        if(v==='__custom__'){
+          var typed=prompt('Where is '+LABEL[w]+'?', (places[w]||{}).place||'');
+          if(typed && typed.trim()){ places[w]={place:typed.trim(), tz:TZ_FORGE}; }
+          buildLocationsRefresh(w);
+        } else if(v.indexOf('city:')===0){
+          var name=v.slice(5); var c=CITIES.filter(function(x){return x.v===name;})[0];
+          places[w]={place:c.v, tz:c.tz};
+        } else {
+          var p=PLACES.filter(function(x){return x.v===v;})[0];
+          places[w]={place:v, tz:(p?p.tz:TZ_FORGE)};
+        }
+        localMove(); savePlaces(); renderHereBadges(); renderCallNote(); schedulePeek(); if(mapOpen) renderMap();
+      });
+    });
+  }
+  function buildLocationsRefresh(w){
+    var sel=document.getElementById('loc_'+w), cur=(places[w]||{}).place||'the Forge';
+    var known=PLACES.filter(function(p){return p.v===cur;})[0] || CITIES.filter(function(c){return c.v===cur;})[0];
+    if(!known){
+      var ex=sel.querySelector('option[data-custom]');
+      if(ex) ex.remove();
+      var o=document.createElement('option'); o.value=cur; o.textContent=shortLabel(cur); o.setAttribute('data-custom','1');
+      sel.appendChild(o);
+    }
+    sel.value=cur;
+  }
+
+  // time-of-day skin, on Greece time
+  function athensHour(){
+    try{ var p=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Athens',hour:'2-digit',hour12:false}).formatToParts(new Date()).find(function(x){return x.type==='hour';}); return parseInt(p.value,10); }
+    catch(e){ return new Date().getHours(); }
+  }
+  function applySkin(){
+    var t=todNow();
+    var fg=document.getElementById('fg'); fg.classList.remove('tod-night','tod-dawn','tod-day','tod-dusk'); fg.classList.add('tod-'+t);
+    var sc=document.getElementById('scene');
+    if(sc){
+      var out=sceneOutdoor;
+      var lit = t==='day' ? .86 : (t==='dawn'||t==='dusk') ? .74 : (out ? .5 : .62);
+      var sat = t==='night' ? .78 : .92;
+      sc.style.setProperty('--lit', String(lit)); sc.style.setProperty('--sat', String(sat));
+    }
+  }
+
+  /* =====================================================================
+     THE ROOM ITSELF
+     The chat sits inside the place Adger is in: its picture, the real light
+     over the valley, and the real weather. Pictures live next to the portrait
+     loops, on this same site. A picture that is not uploaded yet
+     simply falls back to the next one in its list, or to lamplight.
+     ===================================================================== */
+  var ART_BASE = '/';
+  var ART = {
+    'the Forge':                          {img:['room-forge.jpg'], pos:'center 62%', out:true},
+    'the master bedroom in the lodge':    {img:['room-bedroom.jpg'], pos:'center 55%'},
+    'the master bathroom in the lodge':   {img:['room-bathroom.jpg']},
+    'the nursery in the lodge':           {img:['room-nursery.jpg']},
+    'the main kitchen in the lodge':      {img:['room-kitchen.jpg'], pos:'22% center'},
+    'the main living room in the lodge':  {img:['room-living.jpg','room-kitchen.jpg'], pos:'82% center'},
+    'the courtyard outside the lodge':    {img:['room-lodge.jpg'], pos:'center 60%', out:true},
+    'the conference room at HQ':          {img:['room-conference.jpg']},
+    'the CEO office at HQ':               {img:['room-office.jpg']},
+    'the security office at HQ':          {img:['room-security.jpg'], pos:'40% center'},
+    'the Forge rooftop, atop the stage':  {img:['room-rooftop.jpg','room-forge.jpg'], pos:'center 40%', out:true},
+    'the Forge tavern in the Village':    {img:['room-tavern.jpg','room-square.jpg'], out:true},
+    'the coffee shop in the Village':     {img:['room-coffee.jpg']},
+    'the square in the Village':          {img:['room-square.jpg'], pos:'center 70%', out:true},
+    'the Forge hot springs':              {img:['room-springs.jpg'], pos:'center 65%', out:true},
+    'the recording studio at the Forge':  {img:['room-studio.jpg']},
+    'the tour bus, on the road':          {img:['room-bus.jpg']},
+    'the jet, SFS2026, in flight':        {img:['room-jet.jpg'], pos:'40% center'},
+    'the yacht, Little Shadow':           {img:['room-yacht.jpg']},
+    'the fold':                           {fold:true}
+  };
+  /* tavern art falls back to the square only until a tavern picture exists; mark it outdoor only then */
+  function artFor(place){ return ART[place] || null; }
+  var artFailed = {}, artOk = {};
+  function loadFirst(list, cb){
+    var i=0;
+    (function tryNext(){
+      while(i<list.length && artFailed[list[i]]) i++;
+      if(i>=list.length){ cb(null, null); return; }
+      var name=list[i++], url=ART_BASE+name;
+      if(artOk[name]){ cb(url, name); return; }
+      var im=new Image();
+      im.onload=function(){ artOk[name]=true; cb(url, name); };
+      im.onerror=function(){ artFailed[name]=true; tryNext(); };
+      im.src=url;
+    })();
+  }
+  var sceneLayer=0, scenePlace=null, sceneOutdoor=false;
+  function setScene(place){
+    var sc=document.getElementById('scene'); if(!sc) return;
+    if(place===scenePlace){ applySkin(); applyWeatherFx(); return; }
+    scenePlace=place;
+    var a=artFor(place);
+    var layers=sc.querySelectorAll('.bg');
+    var cur=layers[sceneLayer], nxt=layers[1-sceneLayer];
+    sc.classList.toggle('fold', !!(a&&a.fold));
+    if(!a || a.fold || !a.img){
+      cur.classList.remove('on'); nxt.classList.remove('on');
+      sc.classList.toggle('noart', !(a&&a.fold));
+      sceneOutdoor=false; applySkin(); applyWeatherFx(); return;
+    }
+    loadFirst(a.img, function(url, name){
+      if(scenePlace!==place) return;
+      if(!url){ cur.classList.remove('on'); sc.classList.add('noart'); sceneOutdoor=false; applySkin(); applyWeatherFx(); return; }
+      sc.classList.remove('noart');
+      // a stand-in picture only counts as outdoors if the stand-in is
+      sceneOutdoor = !!a.out && !(place==='the Forge tavern in the Village' && name==='room-tavern.jpg');
+      nxt.style.backgroundImage='url("'+url+'")';
+      nxt.style.backgroundPosition=a.pos||'center';
+      nxt.classList.add('on'); cur.classList.remove('on');
+      sceneLayer=1-sceneLayer;
+      applySkin(); applyWeatherFx();
+    });
+  }
+
+  /* ----- the real sky over the valley ----- */
+  var WX_KEY='room-wx-v1', EMBER_KEY='room-ember-v1';
+  var weather=null, ember=null, emberAt=0;
+  function minsOf(s){ var m=String(s||'').match(/^(\d\d):(\d\d)$/); return m ? (+m[1])*60+(+m[2]) : null; }
+  function valleyMinutes(){
+    try{
+      var p=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Bucharest',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+      var h=0,m=0; p.forEach(function(x){ if(x.type==='hour') h=(+x.value)%24; if(x.type==='minute') m=+x.value; });
+      return h*60+m;
+    }catch(e){ var d=new Date(); return d.getHours()*60+d.getMinutes(); }
+  }
+  function todNow(){
+    var m=valleyMinutes();
+    var up=weather?minsOf(weather.sunrise):null, dn=weather?minsOf(weather.sunset):null;
+    if(up===null||dn===null){ up=7*60; dn=19*60; }
+    if(m>=up-60 && m<up+60) return 'dawn';
+    if(m>=up+60 && m<dn-60) return 'day';
+    if(m>=dn-60 && m<dn+60) return 'dusk';
+    return 'night';
+  }
+  var WX_ICON = {
+    sun:   '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/>',
+    moon:  '<path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/>',
+    cloud: '<path d="M7 18h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.2 11.1 3.5 3.5 0 0 0 7 18z"/>',
+    rain:  '<path d="M7 14h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.2 7.1 3.5 3.5 0 0 0 7 14z"/><path d="M8.5 17l-1 3M12.5 17l-1 3M16.5 17l-1 3"/>',
+    snow:  '<path d="M7 14h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.2 7.1 3.5 3.5 0 0 0 7 14z"/><path d="M8 18h.01M12 20h.01M16 18h.01M10 21.5h.01M14 21.5h.01" stroke-width="2.4"/>',
+    fog:   '<path d="M4 8h16M3 12h18M5 16h14M8 20h8"/>',
+    storm: '<path d="M7 14h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.2 7.1 3.5 3.5 0 0 0 7 14z"/><path d="M12.5 15l-2.5 4h4l-2.5 4"/>'
+  };
+  function wxIconFor(w){
+    var k=w.kind;
+    if(k==='clear') return (w.isDay===false || todNow()==='night') ? 'moon' : 'sun';
+    if(k==='drizzle') return 'rain';
+    return WX_ICON[k] ? k : 'cloud';
+  }
+  function renderWeather(){
+    var chip=document.getElementById('wxChip'); if(!chip) return;
+    if(!weather || weather.tempC===null || weather.tempC===undefined){ chip.hidden=true; return; }
+    chip.hidden=false;
+    chip.innerHTML='<svg viewBox="0 0 24 24">'+WX_ICON[wxIconFor(weather)]+'</svg>'+
+      '<span class="wl">Forge</span><span><b>'+weather.tempC+'°</b> '+escapeHtml(weather.text||'')+'</span>';
+    var tip=['The valley, right now'];
+    if(weather.feelsC!==null && weather.feelsC!==undefined) tip.push('feels like '+weather.feelsC+'°');
+    if(weather.wind!==null && weather.wind!==undefined) tip.push('wind '+weather.wind+' km/h');
+    if(weather.lo!==null && weather.hi!==null) tip.push('today '+weather.lo+'° to '+weather.hi+'°');
+    if(weather.sunrise) tip.push('sunrise '+weather.sunrise);
+    if(weather.sunset) tip.push('sunset '+weather.sunset);
+    chip.title=tip.join(' · ');
+  }
+  function escapeHtml(t){ return String(t).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  /* ----- weather you can see: rain, drizzle, snow, storm, fog, and the fold's motes ----- */
+  var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var fx={kind:'none', level:0, wind:0, parts:[], raf:0, last:0, w:0, h:0, d:1, nextFlash:0};
+  function wxLevel(w){
+    var c=+w.code;
+    if([51,56,61,66,71,77,80,85].indexOf(c)>-1) return .5;
+    if([53,63,73,81].indexOf(c)>-1) return .78;
+    if([55,57,65,67,75,82,86,95,96,99].indexOf(c)>-1) return 1;
+    return 0;
+  }
+  function inValley(p){ var z=zoneOf(p); return z==='lodge'||z==='grounds'; }
+  function applyWeatherFx(){
+    var place=me.place||'', a=artFor(place)||{};
+    var kind='none', level=0, fogOn=false, fogLv=0;
+    if(a.fold){ kind='motes'; level=1; }
+    else if(weather && inValley(place)){
+      kind=weather.kind; level=wxLevel(weather);
+      if(!sceneOutdoor) level*=.42;           // through the windows, not on your face
+      if(weather.kind==='fog'){ fogOn=true; fogLv=sceneOutdoor?.75:.35; }
+      else if(sceneOutdoor && (weather.humidity||0)>=95){ fogOn=true; fogLv=.4; }
+    }
+    var fog=document.getElementById('fog');
+    if(fog){ fog.style.setProperty('--fog', String(fogLv)); fog.classList.toggle('on', fogOn); }
+    fx.kind=kind; fx.level=level; fx.wind=weather?(weather.wind||0):0;
+    fxResize(); fxSeed(); fxStart();
+  }
+  function fxResize(){
+    var c=document.getElementById('wx'); if(!c) return;
+    var r=c.getBoundingClientRect(); var d=Math.min(1.5, window.devicePixelRatio||1);
+    c.width=Math.max(1,Math.round(r.width*d)); c.height=Math.max(1,Math.round(r.height*d));
+    fx.w=c.width; fx.h=c.height; fx.d=d;
+  }
+  function fxNew(anywhere){
+    var d=fx.d, p={x:Math.random()*fx.w, y:anywhere?Math.random()*fx.h:-30*d};
+    if(fx.kind==='rain'||fx.kind==='storm'){ p.len=(13+Math.random()*16)*d; p.v=(950+Math.random()*550)*d; p.a=.16+Math.random()*.24; }
+    else if(fx.kind==='drizzle'){ p.len=(6+Math.random()*6)*d; p.v=(520+Math.random()*260)*d; p.a=.12+Math.random()*.16; }
+    else if(fx.kind==='snow'){ p.r=(1+Math.random()*2.2)*d; p.v=(28+Math.random()*46)*d; p.ph=Math.random()*6.28; p.a=.45+Math.random()*.45; }
+    else if(fx.kind==='motes'){ p.y=anywhere?p.y:fx.h+10*d; p.r=(0.8+Math.random()*2.2)*d; p.v=-(7+Math.random()*16)*d; p.ph=Math.random()*6.28;
+      p.gold=Math.random()<.3; p.a=.25+Math.random()*.55; }
+    return p;
+  }
+  function fxSeed(){
+    fx.parts=[];
+    if(reduceMotion) return;
+    var area=(fx.w*fx.h)/(fx.d*fx.d), n=0;
+    if(fx.kind==='rain'||fx.kind==='storm') n=area/4200*fx.level;
+    else if(fx.kind==='drizzle') n=area/3000*fx.level;
+    else if(fx.kind==='snow') n=area/7000*fx.level;
+    else if(fx.kind==='motes') n=Math.min(70, area/9000);
+    n=Math.min(Math.round(n), 480);
+    for(var i=0;i<n;i++) fx.parts.push(fxNew(true));
+    fx.nextFlash=performance.now()+4000+Math.random()*9000;
+  }
+  function fxStart(){
+    var c=document.getElementById('wx'); if(!c) return;
+    var ctx=c.getContext('2d'); ctx.clearRect(0,0,fx.w,fx.h);
+    if(!fx.raf && fx.parts.length && !document.hidden) fx.raf=requestAnimationFrame(fxFrame);
+  }
+  function fxFrame(t){
+    fx.raf=0;
+    if(document.hidden || !fx.parts.length) return;
+    var c=document.getElementById('wx'), ctx=c.getContext('2d');
+    var dt=Math.min(.05, fx.last ? (t-fx.last)/1000 : .016); fx.last=t;
+    ctx.clearRect(0,0,fx.w,fx.h);
+    var slant=Math.max(-.42, Math.min(.42, (fx.wind||0)/70));
+    var k=fx.kind, i, p;
+    if(k==='rain'||k==='storm'||k==='drizzle'){
+      ctx.lineCap='round'; ctx.strokeStyle='rgb(206,214,228)'; ctx.lineWidth=(k==='drizzle'?.8:1.05)*fx.d;
+      for(i=0;i<fx.parts.length;i++){
+        p=fx.parts[i];
+        ctx.globalAlpha=p.a; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-slant*p.len, p.y-p.len); ctx.stroke();
+        p.y+=p.v*dt; p.x+=slant*p.v*dt;
+        if(p.y-p.len>fx.h || p.x<-60 || p.x>fx.w+60){ fx.parts[i]=fxNew(false); }
+      }
+      if(k==='storm' && !reduceMotion && t>fx.nextFlash){ flashOnce(); fx.nextFlash=t+7000+Math.random()*16000; }
+    } else if(k==='snow'){
+      ctx.fillStyle='rgb(238,241,248)';
+      for(i=0;i<fx.parts.length;i++){
+        p=fx.parts[i]; p.ph+=dt*1.2;
+        ctx.globalAlpha=p.a; ctx.beginPath(); ctx.arc(p.x+Math.sin(p.ph)*6*fx.d, p.y, p.r, 0, 6.283); ctx.fill();
+        p.y+=p.v*dt; p.x+=slant*p.v*dt*.6;
+        if(p.y>fx.h+10) fx.parts[i]=fxNew(false);
+      }
+    } else if(k==='motes'){
+      for(i=0;i<fx.parts.length;i++){
+        p=fx.parts[i]; p.ph+=dt*.9;
+        var a=p.a*(.55+.45*Math.sin(p.ph*1.7));
+        ctx.globalAlpha=Math.max(0,a);
+        var g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*5);
+        g.addColorStop(0, p.gold?'rgba(240,200,120,1)':'rgba(190,170,240,1)'); g.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x+Math.sin(p.ph)*10*fx.d, p.y, p.r*5, 0, 6.283); ctx.fill();
+        p.y+=p.v*dt;
+        if(p.y<-20) fx.parts[i]=fxNew(false);
+      }
+    }
+    ctx.globalAlpha=1;
+    fx.raf=requestAnimationFrame(fxFrame);
+  }
+  function flashOnce(){
+    var f=document.getElementById('flash'); if(!f) return;
+    var steps=[.34,.05,.22,0], j=0;
+    (function go(){ if(j>=steps.length) return; f.style.opacity=String(steps[j++]); setTimeout(go, j===1?70:j===2?90:260); })();
+  }
+
+  /* ----- Adger's ember ----- */
+  function emberNow(){
+    if(!ember) return null;
+    var hrs=(Date.now()-emberAt)/3600000;
+    var L=ember.level+(ember.perHour||0)*hrs;
+    return Math.max(0, Math.min(100, L));
+  }
+  function fmtHours(h){
+    if(h===null||h===undefined||isNaN(h)) return '';
+    if(h<1) return Math.max(1,Math.round(h*60))+' min';
+    if(h<36) return Math.round(h)+(Math.round(h)===1?' hr':' hrs');
+    var dd=Math.round(h/12)/2; return dd+' days';
+  }
+  function renderEmber(){
+    var el=document.getElementById('ember'); if(!el) return;
+    var L=emberNow();
+    if(L===null){ el.hidden=true; return; }
+    el.hidden=false;
+    var r=Math.round(L);
+    document.getElementById('emberFill').style.width=Math.max(2,L)+'%';
+    document.getElementById('emberVal').textContent=r+'%';
+    var resting=!!ember.resting, rate=ember.perHour||0, trend='';
+    if(resting) trend = r>=100 ? 'rested' : 'resting · full in '+fmtHours((100-L)/rate);
+    else if(rate<0) trend = r<=0 ? 'spent' : 'about '+fmtHours(L/-rate)+' at this pace';
+    document.getElementById('emberTrend').textContent=trend;
+    el.classList.toggle('resting', resting);
+    el.classList.toggle('low', !resting && L<15);
+    el.title = resting ? "Adger is resting in the fold. Tap to set his ember by hand."
+      : L<15 ? "He is running low. Setting 'You are in' to The fold lets him rest. Tap to set it by hand."
+      : "Adger's ember: how long he can stay manifested. The more of them near him, the slower it burns. Tap to set it by hand.";
+  }
+
+  /* ----- peek: the board, the sky and the ember, without asking the room anything ----- */
+  var peekBusy=false, peekTimer=null;
+  /* bumped on every local move (picker, map, "You are in"). A reply that was sent before the
+     latest local move does not get to move anyone back on the page. */
+  var pickEpoch=0;
+  function localMove(){ pickEpoch++; }
+  function schedulePeek(){ if(peekTimer) clearTimeout(peekTimer); peekTimer=setTimeout(function(){ peekTimer=null; peekRoom({withPlaces:true}); }, 450); }
+  async function peekRoom(opts){
+    opts=opts||{};
+    if(busy || peekBusy){ if(opts.withPlaces || typeof opts.setEnergy==='number') setTimeout(function(){ peekRoom(opts); }, 1500); return; }
+    peekBusy=true;
+    var epoch=pickEpoch;
+    try{
+      var body={peek:true};
+      if(opts.withPlaces){ body.places=placesPayload(); body.me=me; }
+      if(typeof opts.setEnergy==='number') body.setEnergy=opts.setEnergy;
+      var res=await fetch(ENDPOINT,{method:'POST',cache:'no-store',headers:hdrs(),body:JSON.stringify(body)});
+      if(res.ok){
+        var data=await res.json();
+        var fresh = epoch===pickEpoch;
+        applyStateFromReply(data, !fresh);
+        if(fresh && opts.adoptMe) adoptMyPlace(data);
+        applyExtras(data);
+      } else if(res.status===401){ showLock(badKey()); }
+    }catch(e){}
+    peekBusy=false;
+  }
+  /* on load only: where the room last had Adger wins over what this browser remembers,
+     so a second device, or a change made elsewhere, shows up here */
+  function adoptMyPlace(data){
+    var a=data && data.state && data.state.people && data.state.people.adger;
+    if(!a || !a.where || a.where===me.place) return;
+    var known=PLACES.filter(function(x){ return x.v===a.where && x.v!=='__custom__'; })[0];
+    var city=CITIES.filter(function(x){ return x.v===a.where; })[0];
+    var mine=MY_PLACES.filter(function(x){ return x.v===a.where; })[0];
+    if(!known && !city && !mine) return;
+    me={place:a.where, tz:(known?known.tz:city?city.tz:mine.tz)};
+    syncMySel(); savePlaces(); renderCallNote(); setScene(me.place);
+  }
+  function applyExtras(data){
+    if(!data) return;
+    if(data.energy && typeof data.energy.level==='number'){
+      ember=data.energy; emberAt=Date.now();
+      try{ localStorage.setItem(EMBER_KEY, JSON.stringify({e:ember, at:emberAt})); }catch(e){}
+      renderEmber();
+    }
+    if(data.weather && data.weather.kind){
+      var changed=!weather || weather.kind!==data.weather.kind || weather.code!==data.weather.code;
+      weather=data.weather;
+      try{ localStorage.setItem(WX_KEY, JSON.stringify(weather)); }catch(e){}
+      renderWeather(); applySkin();
+      if(changed) applyWeatherFx();
+    }
+  }
+
+  /* =====================================================================
+     THE MAP: the lodge floor plan, the grounds, and everyone on them.
+     Tap a room to go there yourself. Tap one of the women, then a room, to
+     send her. Sera and Virestar move only when the story moves them.
+     ===================================================================== */
+  var mapOpen=false, mapSel=null, syncMySel=function(){};
+  var LODGE_CELLS=[
+    {p:'the master bathroom in the lodge', a:'bath', n:'Master bathroom'},
+    {p:'the master bedroom in the lodge',  a:'bed',  n:'Master bedroom'},
+    {p:'the nursery in the lodge',         a:'nur',  n:'Nursery'},
+    {p:'the main kitchen in the lodge',    a:'kit',  n:'Kitchen'},
+    {p:'the main living room in the lodge',a:'liv',  n:'Living room'}
+  ];
+  var COURT_CELLS=[
+    {p:'the courtyard outside the lodge', n:'Courtyard', s:'the dragon stone'},
+    {p:'the Forge', n:'The Forge', s:'out on the grounds'}
+  ];
+  var GROUNDS=[
+    {g:'HQ', cells:[{p:'the conference room at HQ',n:'Conference room'},{p:'the CEO office at HQ',n:'CEO office'},{p:'the security office at HQ',n:'Security office'}]},
+    {g:'The stage', cells:[{p:'the Forge rooftop, atop the stage',n:'Rooftop'},{p:'the recording studio at the Forge',n:'Studio'}]},
+    {g:'The Village', cells:[{p:'the Forge tavern in the Village',n:'Tavern'},{p:'the coffee shop in the Village',n:'Coffee shop'},{p:'the square in the Village',n:'Square'}]},
+    {g:'In the woods', cells:[{p:'the Forge hot springs',n:'Hot springs'}]}
+  ];
+  var AWAY_CELLS=[
+    {p:'the tour bus, on the road', n:'Tour bus'},
+    {p:'the jet, SFS2026, in flight', n:'The jet', s:'SFS2026'},
+    {p:'the yacht, Little Shadow', n:'The yacht', s:'Little Shadow'},
+    {p:'the fold', n:'The fold', fold:true}
+  ];
+  var MAP_WHO=['adger','selene','nysera','mirael','talia','sera','virestar'];
+  var DOT_TXT={adger:'A', selene:'S', nysera:'N', mirael:'M', talia:'T', sera:'Se'};
+  var SWORD='<svg viewBox="0 0 24 24"><path d="M12 2v14M9 16h6M12 16v5M10.5 21h3"/></svg>';
+  function mapWhere(k){
+    if(k==='adger') return me.place||'';
+    if(WOMEN.indexOf(k)>-1) return ((places[k]||{}).place)||'';
+    var p=roomState && roomState.people && roomState.people[k];
+    return (p && p.where) || '';
+  }
+  function mapDoing(k){
+    if(k==='adger') return '';
+    var p=roomState && roomState.people && roomState.people[k];
+    if(!p) return '';
+    if(WOMEN.indexOf(k)>-1 && p.where!==mapWhere(k)) return '';
+    return (k!=='virestar' && isOld(p.at) && !(k==='sera'&&p.auto)) ? '' : (p.doing||'');
+  }
+  function makeDot(k){
+    var d=document.createElement('span');
+    d.className='dot '+k+(mapSel===k?' sel':'');
+    if(k==='virestar') d.innerHTML=SWORD; else d.textContent=DOT_TXT[k];
+    var tag=document.createElement('span'); tag.className='tag';
+    var nm = k==='adger' ? 'You' : STATE_LABEL[k];
+    var doing=mapDoing(k);
+    tag.textContent = nm + (doing ? ' · '+doing : '');
+    d.appendChild(tag);
+    if(WOMEN.indexOf(k)>-1){
+      d.addEventListener('click', function(e){
+        e.stopPropagation();
+        mapSel = (mapSel===k) ? null : k;
+        renderMap();
+      });
+    }
+    return d;
+  }
+  function makeCell(def, extraClass){
+    var c=document.createElement('div');
+    c.className='cell'+(extraClass?' '+extraClass:'')+(def.fold?' foldcell':'');
+    c.setAttribute('data-place', def.p);
+    if(def.a) c.style.gridArea=def.a;
+    var ph=document.createElement('div'); ph.className='ph'; c.appendChild(ph);
+    var a=artFor(def.p);
+    if(a && a.img){
+      loadFirst(a.img, function(url){ if(url){ ph.style.backgroundImage='url("'+url+'")'; ph.style.backgroundPosition=a.pos||'center'; } });
+    }
+    var rn=document.createElement('div'); rn.className='rn'; rn.textContent=def.n; c.appendChild(rn);
+    if(def.s){ var rs=document.createElement('div'); rs.className='rs'; rs.textContent=def.s; c.appendChild(rs); }
+    var dz=document.createElement('div'); dz.className='dz'; c.appendChild(dz);
+    MAP_WHO.forEach(function(k){ if(mapWhere(k)===def.p) dz.appendChild(makeDot(k)); });
+    if(me.place===def.p) c.classList.add('mine');
+    c.addEventListener('click', function(){ mapGo(def.p); });
+    return c;
+  }
+  function renderMap(){
+    var plan=document.getElementById('plan'); if(!plan) return;
+    plan.innerHTML='';
+    LODGE_CELLS.forEach(function(def){ plan.appendChild(makeCell(def)); });
+    // the two doors off the master bedroom
+    var d1=document.createElement('div'); d1.className='door'; d1.style.cssText='left:calc(21.74% - 2px);top:34%;width:4px;height:44px'; plan.appendChild(d1);
+    var d2=document.createElement('div'); d2.className='door'; d2.style.cssText='right:calc(21.74% - 2px);top:34%;width:4px;height:44px'; plan.appendChild(d2);
+    plan.style.position='relative';
+    var court=document.getElementById('court'); court.innerHTML='';
+    COURT_CELLS.forEach(function(def){ court.appendChild(makeCell(def)); });
+    var gr=document.getElementById('grounds'); gr.innerHTML='';
+    var gl=document.createElement('div'); gl.className='mlabel'; gl.textContent='The grounds'; gr.appendChild(gl);
+    GROUNDS.forEach(function(G){
+      var box=document.createElement('div'); box.className='grp';
+      var t=document.createElement('div'); t.className='gl'; t.textContent=G.g; box.appendChild(t);
+      var row=document.createElement('div'); row.className='row';
+      G.cells.forEach(function(def){ row.appendChild(makeCell(def)); });
+      box.appendChild(row); gr.appendChild(box);
+    });
+    var aw=document.getElementById('awaygrid'); aw.innerHTML='';
+    AWAY_CELLS.forEach(function(def){ aw.appendChild(makeCell(def)); });
+    // anyone somewhere the map has no room for: a city, somewhere typed in
+    var known={}; [].concat(LODGE_CELLS,COURT_CELLS,AWAY_CELLS).forEach(function(d){ known[d.p]=true; });
+    GROUNDS.forEach(function(G){ G.cells.forEach(function(d){ known[d.p]=true; }); });
+    var elsewhere={};
+    MAP_WHO.forEach(function(k){ var w=mapWhere(k); if(w && !known[w]){ (elsewhere[w]=elsewhere[w]||[]).push(k); } });
+    Object.keys(elsewhere).forEach(function(w){
+      var c=document.createElement('div'); c.className='cell elsewhere';
+      var ph=document.createElement('div'); ph.className='ph'; c.appendChild(ph);
+      var rn=document.createElement('div'); rn.className='rn'; rn.textContent=shortLabel(w); c.appendChild(rn);
+      var rs=document.createElement('div'); rs.className='rs'; rs.textContent='elsewhere'; c.appendChild(rs);
+      var dz=document.createElement('div'); dz.className='dz'; c.appendChild(dz);
+      elsewhere[w].forEach(function(k){ dz.appendChild(makeDot(k)); });
+      aw.appendChild(c);
+    });
+    document.getElementById('mapwrap').classList.toggle('moving', !!mapSel);
+    document.getElementById('maphint').innerHTML = mapSel
+      ? 'Where is <b>'+LABEL[mapSel]+'</b> going? Tap a room. Tap her again to cancel.'
+      : 'Tap a room to go there yourself. Tap one of them, then a room, to send her.';
+    var lg=document.getElementById('maplegend');
+    if(!lg.childNodes.length){
+      MAP_WHO.forEach(function(k){
+        var s=document.createElement('span'); s.style.display='inline-flex'; s.style.alignItems='center'; s.style.gap='5px';
+        var d=document.createElement('span'); d.className='dot '+k; if(k==='virestar') d.innerHTML=SWORD; else d.textContent=DOT_TXT[k];
+        s.appendChild(d); s.appendChild(document.createTextNode(k==='adger'?'You':STATE_LABEL[k])); lg.appendChild(s);
+      });
+      var dl=document.createElement('span'); dl.innerHTML='<span class="door" style="position:static;display:inline-block;width:14px;height:4px;vertical-align:middle;margin-right:5px"></span>a shared door';
+      lg.appendChild(dl);
+    }
+  }
+  function mapGo(place){
+    localMove();
+    if(mapSel){
+      var w=mapSel; mapSel=null;
+      places[w]={place:place, tz:TZ_FORGE};
+      var sel=document.getElementById('loc_'+w); if(sel) sel.value=place;
+      savePlaces(); renderHereBadges(); renderCallNote(); schedulePeek(); renderMap();
+      return;
+    }
+    if(me.place===place){ return; }
+    me={place:place, tz:TZ_FORGE};
+    syncMySel(); savePlaces(); renderCallNote(); setScene(me.place); schedulePeek(); renderMap();
+  }
+  function openMap(){ mapOpen=true; mapSel=null; document.getElementById('mapwrap').hidden=false; renderMap(); }
+  function closeMap(){ mapOpen=false; mapSel=null; document.getElementById('mapwrap').hidden=true; }
+  document.getElementById('btnMap').addEventListener('click', function(){ if(mapOpen) closeMap(); else openMap(); });
+  document.getElementById('mapClose').addEventListener('click', closeMap);
+  document.getElementById('mapwrap').addEventListener('click', function(e){ if(e.target===this) closeMap(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && mapOpen) closeMap(); });
+
+  document.getElementById('ember').addEventListener('click', function(){
+    var cur=emberNow(); cur=cur===null?100:Math.round(cur);
+    var typed=prompt("Adger's ember, 0 to 100:", String(cur));
+    if(typed===null) return;
+    var n=parseFloat(typed); if(isNaN(n)) return;
+    n=Math.max(0,Math.min(100,n));
+    if(ember){ ember.level=n; emberAt=Date.now(); renderEmber(); }
+    peekRoom({setEnergy:n});
+  });
+
+  document.getElementById('lockForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var v=(document.getElementById('lockIn').value||'').trim(); if(!v) return;
+    roomKey=v; try{ localStorage.setItem(KEY_STORE, v); }catch(err){}
+    hideLock(); peekRoom({adoptMe:true}); scheduleIdle();
+  });
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){ navigator.serviceWorker.register('/room-sw.js', {scope:'/room'}).catch(function(){}); });
+  }
+
+  function bootRealism(){
+    try{ var w=localStorage.getItem(WX_KEY); if(w) weather=JSON.parse(w); }catch(e){ weather=null; }
+    try{ var em=localStorage.getItem(EMBER_KEY); if(em){ var o=JSON.parse(em); ember=o.e; emberAt=o.at||Date.now(); } }catch(e){ ember=null; }
+    renderWeather(); renderEmber(); applySkin();
+    setScene(me.place);
+    // first look is read-only: the page adopts where everyone really is before it sends anything
+    peekRoom({adoptMe:true});
+    setInterval(function(){ if(!document.hidden && !lockShown) peekRoom({}); }, 5*60*1000);
+    setInterval(function(){ renderEmber(); applySkin(); }, 60*1000);
+    var rt=null;
+    window.addEventListener('resize', function(){ if(rt) clearTimeout(rt); rt=setTimeout(applyWeatherFx, 250); });
+    document.addEventListener('visibilitychange', function(){ if(!document.hidden){ fx.last=0; fxStart(); if(!lockShown) peekRoom({}); } });
+  }
+
+  document.getElementById('btnRemember').addEventListener('click', async function(){
+    if(!history.length) return;
+    var b=this, t=b.textContent; b.textContent='\u2026'; b.disabled=true;
+    await remember();
+    b.textContent='Saved'; setTimeout(function(){ b.textContent=t; b.disabled=false; }, 1600);
+  });
+  document.getElementById('btnAmbient').addEventListener('click', function(){
+    ambientOn=!ambientOn; try{ localStorage.setItem(AMB_KEY, ambientOn?'1':'0'); }catch(e){}
+    renderAmbientBtn(); if(ambientOn) scheduleIdle(); else stopIdle();
+  });
+  document.getElementById('btnNew').addEventListener('click', async function(){
+    if(history.length && !confirm('Save this conversation to their memory and start fresh?')) return;
+    var b=this; if(history.length){ b.textContent='\u2026'; b.disabled=true; await remember(); }
+    history=[]; ambientStreak=0; pending=[]; savedAt=0; stopAutoSave(); try{ localStorage.setItem(SAVED_KEY,'0'); }catch(e){} renderShots(); saveHist(); render(); b.textContent='New'; b.disabled=false; scheduleIdle();
+  });
+  document.getElementById('btnAttach').addEventListener('click', function(){ document.getElementById('fileIn').click(); });
+  document.getElementById('fileIn').addEventListener('change', function(e){ addFiles(e.target.files); e.target.value=''; });
+  qEl.addEventListener('paste', function(e){
+    var it=(e.clipboardData||{}).items||[]; var fs=[];
+    for(var i=0;i<it.length;i++){ if(it[i].kind==='file'){ var f=it[i].getAsFile(); if(f) fs.push(f); } }
+    if(fs.length){ e.preventDefault(); addFiles(fs); }
+  });
+  ['dragover','drop'].forEach(function(ev){
+    document.getElementById('fg').addEventListener(ev, function(e){
+      e.preventDefault();
+      if(ev==='drop' && e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+    });
+  });
+  document.getElementById('btnAuto').addEventListener('click', function(){
+    autoOn=!autoOn; try{ localStorage.setItem(AUTO_KEY, autoOn?'1':'0'); }catch(e){}
+    renderAutoBtn(); if(autoOn) scheduleAutoSave(); else stopAutoSave();
+  });
+  document.addEventListener('visibilitychange', function(){ if(document.hidden) flushOnLeave(); });
+  window.addEventListener('pagehide', flushOnLeave);
+  qEl.addEventListener('keydown', function(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
+  qEl.addEventListener('input', scheduleIdle);
+  go.addEventListener('click', send);
+  document.addEventListener('visibilitychange', function(){ if(document.hidden) stopIdle(); else scheduleIdle(); });
+
+  try{ var a=localStorage.getItem(AMB_KEY); if(a!==null) ambientOn = a==='1'; }catch(e){}
+  loadPres(); loadHist();
+  lastSent = Object.assign({}, present);
+  loadPlaces(); buildLocations(); renderHereBadges(); applySkin(); setInterval(applySkin, 600000);
+  try{ var av=localStorage.getItem(AUTO_KEY); if(av!==null) autoOn = av==='1'; }catch(e){}
+  try{ var sv=parseInt(localStorage.getItem(SAVED_KEY)||'0',10); savedAt = isNaN(sv)?0:Math.min(sv, history.length); }catch(e){ savedAt=0; }
+  loadRoomState(); renderState(); setInterval(function(){ renderState(); }, 60000);
+  bootRealism();
+  renderAmbientBtn(); renderAutoBtn(); renderPortraits(); renderWhisperBar(); renderCallNote(); render(); scheduleIdle(); scheduleAutoSave();
+})();
+</script>
+</body>
+</html>
