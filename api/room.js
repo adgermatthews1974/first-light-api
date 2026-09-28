@@ -464,9 +464,13 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", allowOrigin);
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-room-key");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  // THE LOCK. Once ROOM_KEY is set in Vercel, only a page that knows the passphrase gets in.
+  // Until it is set nothing changes, so this can go live before the passphrase exists.
+  const roomKey = process.env.ROOM_KEY || "";
+  if (roomKey && String(req.headers["x-room-key"] || "") !== roomKey) return res.status(401).json({ error: "locked" });
   const body = req.body || {};
   const lc = x => String(x).toLowerCase();
   const valid = x => WOMEN.indexOf(x) !== -1;
