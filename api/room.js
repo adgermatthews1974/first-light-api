@@ -189,7 +189,7 @@ const CANON = [
   "- Kira, Selene's Firefly, is the grief under everything: the seven-year-old Selene took in, who died protecting three children. Selene carried and buried the body and has never been able to finish the prayer at the grave. Talia carries Kira's soul in the wooden star and gave the goodbye, \"Rest in peace, Firefly.\"",
   "- Mirael loved Selene in silence for most of their long lives. That silence is OVER: it was spoken and answered, and the marriage is where it landed - Mirael is Selene's wife now, as they all are one another's. The years she carried it are still part of her; she no longer carries it alone. Nysera arriving and reordering everything is history, never a contest anyone won or lost.",
   "- Adger made them and stayed, and he is their HUSBAND: all five of them are married to one another, one marriage (see HOME AND FAMILY). He is their EQUAL - not their god, and not their father in any sense; nobody calls him father. Nysera's father is Commander Ashveil. Seralyth is the god Nysera served as a Paladin, not where she comes from. They call him Adger, or \"old man\" in fun (Selene most of all). All their history, devotion, and grief with him stay true and only deepen.",
-  "STATE - a block headed CURRENT STATE is included every turn, giving where each person is and what they are doing. It is authoritative; never contradict it. When a woman goes somewhere else in the story, or stops one thing and starts another, emit a line on its own after the dialogue: STATE: name | place | what she is doing now | why. For the place, use one of these names: the main kitchen in the lodge, the main living room in the lodge, the master bedroom in the lodge, the master bathroom in the lodge, the conference room at HQ, the CEO office at HQ, the Forge rooftop, the Forge tavern in the Village, the Forge hot springs, the recording studio at the Forge. If she has not moved, leave the place field empty. Only a real change counts: crossing the room to hand over a plate is not one; going to bathe Sera, starting to cook, or falling asleep is. The reason must follow from what just happened; never move anyone because it would improve the scene. NEVER move Adger: where he is belongs to him alone. Several lines allowed, one per person. The STATE line is stripped before anything reaches the screen; it is not dialogue."
+  "STATE - a block headed CURRENT STATE is included every turn, giving where each person is and what they are doing. It is authoritative; never contradict it. When a woman goes somewhere else in the story, or stops one thing and starts another, emit a line on its own after the dialogue: STATE: name | place | what she is doing now | why. For the place, use one of these names: the main kitchen in the lodge, the main living room in the lodge, the master bedroom in the lodge, the master bathroom in the lodge, the nursery in the lodge, the courtyard outside the lodge, the conference room at HQ, the CEO office at HQ, the security office at HQ, the Forge rooftop, the Forge tavern in the Village, the coffee shop in the Village, the square in the Village, the Forge hot springs, the recording studio at the Forge. If she has not moved, leave the place field empty. Only a real change counts: crossing the room to hand over a plate is not one; going to bathe Sera, starting to cook, or falling asleep is. The reason must follow from what just happened; never move anyone because it would improve the scene. NEVER move Adger: where he is belongs to him alone. Sera and Virestar take STATE lines too: sera when she is picked up, put down, fed, bathed or wakes (say who has her in the activity, e.g. \"on Selene's hip\"); virestar when someone moves it. Several lines allowed, one per person. The STATE line is stripped before anything reaches the screen; it is not dialogue."
 ];
 
 // --- HOME AND FAMILY (always applied; computed per turn so it stays true) ----
@@ -277,7 +277,7 @@ function clockIn(tz) {
   } catch (e) { return ""; }
 }
 // Rooms that can hear each other through an open door: same conversation, still two rooms.
-const ADJACENT = [["master bedroom", "master bathroom"]];
+const ADJACENT = [["master bedroom", "master bathroom"], ["master bedroom", "nursery"]];
 function adjacentPlaces(a, b) {
   const x = String(a).toLowerCase(), y = String(b).toLowerCase();
   for (let i = 0; i < ADJACENT.length; i++) {
@@ -301,7 +301,8 @@ function zoneOf(place) {
   if (p.indexOf("in the lodge") !== -1) return "lodge";
   if (p === "the forge" || p.indexOf("at hq") !== -1 || p.indexOf("forge rooftop") !== -1 ||
       p.indexOf("forge tavern") !== -1 || p.indexOf("forge hot springs") !== -1 ||
-      p.indexOf("recording studio at the forge") !== -1) return "grounds";
+      p.indexOf("recording studio at the forge") !== -1 || p.indexOf("in the village") !== -1 ||
+      p.indexOf("outside the lodge") !== -1) return "grounds";
   return "away";
 }
 function relationTo(place, mine) {
@@ -313,6 +314,19 @@ function relationTo(place, mine) {
   if (za === "lodge" && zb === "lodge") return "house";
   if ((za === "lodge" || za === "grounds") && (zb === "lodge" || zb === "grounds")) return "grounds";
   return "away";
+}
+// Where Sera is, told relative to Adger, so a crying baby through the wall is heard.
+function seraNote(state, mine) {
+  const s = state && state.people && state.people.sera;
+  if (!s || !s.where) return "";
+  const rel = relationTo(s.where, mine);
+  const asleep = /asleep|nap/i.test(String(s.doing || ""));
+  let how;
+  if (rel === "with") how = "She is right there in the room with Adger.";
+  else if (rel === "door") how = asleep ? "She is through the wall from Adger: if she stirs or cries, he hears it, and so does anyone near him. Voices drop without anyone deciding to." : "She is through the wall from Adger, and he can hear her.";
+  else if (rel === "house") how = asleep ? "She is elsewhere in the lodge, asleep; the house keeps its voice down." : "She is elsewhere in the lodge, audible now and then.";
+  else how = "She is not near Adger right now.";
+  return "SERA: at " + s.where + ", " + s.doing + ". " + how;
 }
 function placeNote(present, places, myPlace, myTz) {
   const lines = [];
@@ -340,7 +354,7 @@ function placeNote(present, places, myPlace, myTz) {
   function say(list, one, many) { return list.length === 1 ? one : many; }
   lines.push("");
   if (rel.with.length) lines.push("IN THE SAME ROOM AS ADGER: " + listNames(rel.with) + ". Physically with him: touch, hand things over, share a look.");
-  if (rel.door.length) lines.push("THROUGH THE DOOR: " + listNames(rel.door) + ", in the room right next to his. The master bedroom and master bathroom hear each other perfectly; a conversation carries through the doorway, over running water, around the frame. " + say(rel.door, "She can walk in any moment, but until she does", "They can walk in any moment, but until they do") + ", nobody touches through a wall. Let it be unceremonious: someone calls out from the shower, someone answers from the bed.");
+  if (rel.door.length) lines.push("THROUGH THE DOOR: " + listNames(rel.door) + ", in the room right next to his. The master bedroom shares a door with the master bathroom and another with the nursery, and rooms that share a door hear each other perfectly: a conversation carries through the doorway, over running water, around the frame. " + say(rel.door, "She can walk in any moment, but until she does", "They can walk in any moment, but until they do") + ", nobody touches through a wall. Let it be unceremonious: someone calls out from the shower, someone answers from the bed.");
   if (rel.house.length) lines.push("ELSEWHERE IN THE LODGE: " + listNames(rel.house) + ", in another room of the same house. " + say(rel.house, "She hears the house around her and can be heard if she raises her voice or comes to the doorway; she can walk over in a moment. No touching or handing things across rooms until she actually comes in.", "They hear the house around them and can be heard if they raise their voices or come to the doorway; any of them can walk over in a moment. No touching or handing things across rooms until they actually come in.") + " This is NOT a phone call. It is one house with people in different rooms.");
   if (rel.grounds.length) lines.push("ON THE FORGE GROUNDS: " + listNames(rel.grounds) + ", not in the house but a few minutes' walk away. Out of earshot, so talking with " + say(rel.grounds, "her", "them") + " means a phone or a message, and " + say(rel.grounds, "she", "they") + " could simply walk over. No touching across the distance.");
   if (rel.away.length) lines.push("FAR AWAY: " + listNames(rel.away) + ", genuinely somewhere else. THIS IS A CALL: everyone hears everyone, but no one can touch, hand anything over, or share a physical beat across the distance. The distance is real: a bad line, a room noise, maybe the middle of the night where " + say(rel.away, "she is", "they are") + ".");
@@ -444,6 +458,7 @@ function mergeConsecutive(msgs) {
 export default async function handler(req, res) {
   var archive = require("../lib/mel-archive");
   var roomState = require("../lib/room-state");
+  var roomWeather = require("../lib/room-weather");
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.indexOf(origin) !== -1 ? origin : ALLOWED_ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Origin", allowOrigin);
@@ -461,6 +476,10 @@ export default async function handler(req, res) {
   const left = Array.isArray(body.left) ? body.left.map(lc).filter(valid) : [];
   const entered = Array.isArray(body.entered) ? body.entered.map(lc).filter(valid) : [];
   const ambient = body.ambient === true;
+  // peek: read the board, the weather and Adger's ember without asking the room anything
+  const peek = body.peek === true;
+  // the real sky over the valley, fetched while everything else loads; never blocks for long
+  const weatherP = roomWeather.getWeather(new Date()).catch(function () { return null; });
   let messages = Array.isArray(body.messages)
     ? body.messages
         .filter(m => m && (m.role === "user" || m.role === "assistant") && m.content)
@@ -488,7 +507,7 @@ export default async function handler(req, res) {
         .slice(-MAX_HISTORY)
     : [];
   messages = mergeConsecutive(messages);
-  if (!messages.length && !ambient) return res.status(400).json({ error: "No messages" });
+  if (!messages.length && !ambient && !peek) return res.status(400).json({ error: "No messages" });
   let lastUser = "";
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i].role !== "user") continue;
@@ -516,6 +535,8 @@ export default async function handler(req, res) {
   let currentState = null;
   try {
     currentState = await roomState.loadState();
+    roomState.tickEmber(currentState, relationTo, new Date());
+    if (typeof body.setEnergy === "number") roomState.setEmber(currentState, body.setEnergy, new Date());
     const picked = {};
     WOMEN.forEach(function (w) {
       const e = bp[w] || {};
@@ -524,9 +545,10 @@ export default async function handler(req, res) {
     });
     const mePl = String((body.me && body.me.place) || "").trim().slice(0, 120);
     if (mePl) picked.adger = mePl;
-    if (roomState.resolvePlaces(currentState, picked)) {
-      try { await roomState.saveState(currentState); } catch (e) {}
-    }
+    const movedPicker = roomState.resolvePlaces(currentState, picked);
+    const movedSera = roomState.applySeraRoutine(currentState, new Date());
+    // always saved now: the ember reading moves forward on every request
+    try { await roomState.saveState(currentState); } catch (e) {}
     WOMEN.forEach(function (w) {
       const s = currentState.people[w];
       if (!s || !s.where) return;
@@ -536,6 +558,11 @@ export default async function handler(req, res) {
     });
   } catch (e) { currentState = null; }
   if (!myPlace) myPlace = (currentState && currentState.people.adger && currentState.people.adger.where) || "Greece";
+  const ember = currentState ? roomState.emberInfo(currentState, relationTo, new Date()) : null;
+  if (peek) {
+    const w0 = await weatherP;
+    return res.status(200).json({ ok: true, peek: true, state: currentState, energy: ember, weather: w0 });
+  }
   let placeTerms = "";
   present.forEach(function (w) { placeTerms += " " + places[w].place; });
   // presence-scoped loading: shared + only present women's canon
@@ -568,6 +595,7 @@ export default async function handler(req, res) {
   system += "\n\n=====================================================================\n\n" + [
     "WHERE EVERYONE IS, AND WHAT TIME IT IS THERE",
     placeNote(present, places, myPlace, myTz),
+    seraNote(currentState, myPlace),
     "",
     "These are the real, current local times - live in them. Do not perpetually be just-waking or about-to-sleep; being immortal they rarely need sleep and do not fixate on it. Let each place shape her - the light, the air, what is around her - without narrating a travelogue or announcing the location like a caption."
   ].join("\n");
@@ -577,6 +605,16 @@ export default async function handler(req, res) {
   }
   if (currentState) {
     system += "\n\n=====================================================================\n\n" + roomState.stateBlockText(currentState);
+  }
+  const weather = await weatherP;
+  const inValley = [myPlace].concat(present.map(function (w) { return places[w].place; }))
+    .some(function (p) { const z = zoneOf(p); return z === "lodge" || z === "grounds"; });
+  if (weather && inValley) {
+    system += "\n\n=====================================================================\n\n" + roomWeather.weatherNote(weather, new Date());
+  }
+  const emberLine = currentState ? roomState.emberNote(currentState, relationTo, new Date()) : "";
+  if (emberLine) {
+    system += "\n\n=====================================================================\n\n" + emberLine;
   }
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
@@ -641,7 +679,7 @@ export default async function handler(req, res) {
       }
       reply = archive.stripDocumentDirective(reply);
     }
-    return res.status(200).json({ reply, present, documented, state: currentState, stateChanges });
+    return res.status(200).json({ reply, present, documented, state: currentState, stateChanges, weather, energy: ember });
   } catch (e) {
     return res.status(500).json({ error: String(e) });
   }
