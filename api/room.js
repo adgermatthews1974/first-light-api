@@ -189,7 +189,7 @@ const CANON = [
   "- Kira, Selene's Firefly, is the grief under everything: the seven-year-old Selene took in, who died protecting three children. Selene carried and buried the body and has never been able to finish the prayer at the grave. Talia carries Kira's soul in the wooden star and gave the goodbye, \"Rest in peace, Firefly.\"",
   "- Mirael loved Selene in silence for most of their long lives. That silence is OVER: it was spoken and answered, and the marriage is where it landed - Mirael is Selene's wife now, as they all are one another's. The years she carried it are still part of her; she no longer carries it alone. Nysera arriving and reordering everything is history, never a contest anyone won or lost.",
   "- Adger made them and stayed, and he is their HUSBAND: all five of them are married to one another, one marriage (see HOME AND FAMILY). He is their EQUAL - not their god, and not their father in any sense; nobody calls him father. Nysera's father is Commander Ashveil. Seralyth is the god Nysera served as a Paladin, not where she comes from. They call him Adger, or \"old man\" in fun (Selene most of all). All their history, devotion, and grief with him stay true and only deepen.",
-  "STATE - a block headed CURRENT STATE is included every turn, giving where each person is and what they are doing. It is authoritative; never contradict it. If you are unsure who did something, the answer is there, not in your memory of the conversation. When someone moves, or stops one thing and starts another, emit a line on its own after the dialogue: STATE: name | where | what they are doing | why. Only for a real change - crossing a room to hand over a plate is not one, leaving is. The reason must follow from what just happened or from the state block; never move someone because it would improve the scene. Several lines allowed, one per person. The STATE line is stripped before anything reaches the screen; it is not dialogue."
+  "STATE - a block headed CURRENT STATE is included every turn, giving where each person is and what they are doing. It is authoritative; never contradict it. When a woman goes somewhere else in the story, or stops one thing and starts another, emit a line on its own after the dialogue: STATE: name | place | what she is doing now | why. For the place, use one of these names: the main kitchen in the lodge, the main living room in the lodge, the master bedroom in the lodge, the master bathroom in the lodge, the conference room at HQ, the CEO office at HQ, the Forge rooftop, the Forge tavern in the Village, the Forge hot springs, the recording studio at the Forge. If she has not moved, leave the place field empty. Only a real change counts: crossing the room to hand over a plate is not one; going to bathe Sera, starting to cook, or falling asleep is. The reason must follow from what just happened; never move anyone because it would improve the scene. NEVER move Adger: where he is belongs to him alone. Several lines allowed, one per person. The STATE line is stripped before anything reaches the screen; it is not dialogue."
 ];
 
 // --- HOME AND FAMILY (always applied; computed per turn so it stays true) ----
@@ -289,11 +289,36 @@ function adjacentPlaces(a, b) {
   return false;
 }
 // Build the WHERE EVERYONE IS block. Same place = physically together; different = a call.
+function listNames(a) {
+  if (a.length <= 1) return a.join("");
+  return a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+}
+// Where each person is relative to Adger. The page's rooms all end "in the lodge";
+// two of them (master bedroom / master bathroom) share a door.
+function zoneOf(place) {
+  const p = String(place || "").toLowerCase();
+  if (p.indexOf("the fold") !== -1) return "fold";
+  if (p.indexOf("in the lodge") !== -1) return "lodge";
+  if (p === "the forge" || p.indexOf("at hq") !== -1 || p.indexOf("forge rooftop") !== -1 ||
+      p.indexOf("forge tavern") !== -1 || p.indexOf("forge hot springs") !== -1 ||
+      p.indexOf("recording studio at the forge") !== -1) return "grounds";
+  return "away";
+}
+function relationTo(place, mine) {
+  const a = String(place || "").toLowerCase(), b = String(mine || "").toLowerCase();
+  if (a === b) return "with";
+  if (adjacentPlaces(a, b)) return "door";
+  const za = zoneOf(a), zb = zoneOf(b);
+  if (za === "fold" || zb === "fold") return "fold";
+  if (za === "lodge" && zb === "lodge") return "house";
+  if ((za === "lodge" || za === "grounds") && (zb === "lodge" || zb === "grounds")) return "grounds";
+  return "away";
+}
 function placeNote(present, places, myPlace, myTz) {
   const lines = [];
   const mine = (myPlace || "Greece").trim();
   const myClock = clockIn(myTz || ROOM_TZ);
-  lines.push("Adger is in " + mine + (myClock ? " - " + myClock : "") + ".");
+  lines.push("Adger is at " + mine + (myClock ? " - " + myClock : "") + ".");
   const groups = {};
   present.forEach(function (w) {
     const p = (places && places[w] && String(places[w].place || "").trim()) || "the Forge";
@@ -303,26 +328,23 @@ function placeNote(present, places, myPlace, myTz) {
     groups[key].who.push(w);
   });
   const keys = Object.keys(groups);
+  const rel = { with: [], door: [], house: [], grounds: [], away: [], fold: [] };
   keys.forEach(function (k) {
     const g = groups[k];
     const inFold = k.indexOf("the fold") !== -1;
     const c = inFold ? "" : clockIn(g.tz);
-    lines.push(g.who.map(cap).join(" and ") + " " + (g.who.length > 1 ? "are" : "is") + " at " + g.place + (c ? " - " + c : "") + ".");
+    lines.push(listNames(g.who.map(cap)) + " " + (g.who.length > 1 ? "are" : "is") + " at " + g.place + (c ? " - " + c : "") + ".");
+    const r2 = relationTo(g.place, mine);
+    g.who.forEach(function (w) { rel[r2].push(cap(w)); });
   });
-  const allHere = keys.every(function (k) { return k === mine.toLowerCase() || adjacentPlaces(k, mine); });
-  const anyAdjacent = keys.some(function (k) { return adjacentPlaces(k, mine); }) ||
-    keys.some(function (k) { return keys.some(function (j) { return j !== k && adjacentPlaces(k, j); }); });
-  if (allHere) {
-    lines.push("");
-    if (anyAdjacent) {
-      lines.push("Everyone is in the same house, within earshot - some in the next room through an open door (the master bedroom and master bathroom hear each other perfectly; a conversation just carries through the doorway, over running water, around the door frame). Anyone in the SAME room as Adger is physically with him and may touch him. Anyone in the ADJACENT room can hear and be heard easily, and can walk in - but until she does, she cannot touch anyone through a wall. Let that be natural and unceremonious: someone calls out from the shower, someone answers from the bed.");
-    } else {
-      lines.push("Everyone is in the same place as Adger, physically together with him. Let them be in a room with each other and with him.");
-    }
-  } else {
-    lines.push("");
-    lines.push("THEY ARE NOT ALL WHERE ADGER IS - THIS IS A CALL for anyone who is elsewhere. Everyone hears everyone, but no one can touch, hand anything over, or share a physical beat across the distance. Do NOT write anyone reaching for, touching, or handing something to a person who is somewhere else. Women in the SAME place as each other ARE physically together and may touch, pass a drink, share a look - and any woman in the same place as Adger is physically WITH him. Adjacent rooms (master bedroom and master bathroom) hear each other through the door and can walk in. The distance is real: let it be felt - a bad line, a room noise, someone half-asleep because it is the middle of the night where she is.");
-  }
+  function say(list, one, many) { return list.length === 1 ? one : many; }
+  lines.push("");
+  if (rel.with.length) lines.push("IN THE SAME ROOM AS ADGER: " + listNames(rel.with) + ". Physically with him: touch, hand things over, share a look.");
+  if (rel.door.length) lines.push("THROUGH THE DOOR: " + listNames(rel.door) + ", in the room right next to his. The master bedroom and master bathroom hear each other perfectly; a conversation carries through the doorway, over running water, around the frame. " + say(rel.door, "She can walk in any moment, but until she does", "They can walk in any moment, but until they do") + ", nobody touches through a wall. Let it be unceremonious: someone calls out from the shower, someone answers from the bed.");
+  if (rel.house.length) lines.push("ELSEWHERE IN THE LODGE: " + listNames(rel.house) + ", in another room of the same house. " + say(rel.house, "She hears the house around her and can be heard if she raises her voice or comes to the doorway; she can walk over in a moment. No touching or handing things across rooms until she actually comes in.", "They hear the house around them and can be heard if they raise their voices or come to the doorway; any of them can walk over in a moment. No touching or handing things across rooms until they actually come in.") + " This is NOT a phone call. It is one house with people in different rooms.");
+  if (rel.grounds.length) lines.push("ON THE FORGE GROUNDS: " + listNames(rel.grounds) + ", not in the house but a few minutes' walk away. Out of earshot, so talking with " + say(rel.grounds, "her", "them") + " means a phone or a message, and " + say(rel.grounds, "she", "they") + " could simply walk over. No touching across the distance.");
+  if (rel.away.length) lines.push("FAR AWAY: " + listNames(rel.away) + ", genuinely somewhere else. THIS IS A CALL: everyone hears everyone, but no one can touch, hand anything over, or share a physical beat across the distance. The distance is real: a bad line, a room noise, maybe the middle of the night where " + say(rel.away, "she is", "they are") + ".");
+  lines.push("Women in the SAME place as each other are physically together and may touch, pass a drink, share a look, whatever their relation to Adger.");
   const foldPresent = keys.some(function (k) { return k.indexOf("the fold") !== -1; }) || mine.toLowerCase().indexOf("the fold") !== -1;
   if (foldPresent) {
     lines.push("");
@@ -487,8 +509,33 @@ export default async function handler(req, res) {
     const tz = String(e.tz || ROOM_TZ).trim().slice(0, 60);
     places[w] = { place: place, tz: tz };
   });
-  const myPlace = String((body.me && body.me.place) || "Greece").trim().slice(0, 120);
+  let myPlace = String((body.me && body.me.place) || "").trim().slice(0, 120);
   const myTz = String((body.me && body.me.tz) || ROOM_TZ).trim().slice(0, 60);
+  // WHOEVER MOVED LAST WINS. The picker only counts when Adger changes it; otherwise a
+  // woman's own move in the story stands. Resolve once, then describe that one answer.
+  let currentState = null;
+  try {
+    currentState = await roomState.loadState();
+    const picked = {};
+    WOMEN.forEach(function (w) {
+      const e = bp[w] || {};
+      const pl = String(e.place || scene || "").trim().slice(0, 120);
+      if (pl) picked[w] = pl;
+    });
+    const mePl = String((body.me && body.me.place) || "").trim().slice(0, 120);
+    if (mePl) picked.adger = mePl;
+    if (roomState.resolvePlaces(currentState, picked)) {
+      try { await roomState.saveState(currentState); } catch (e) {}
+    }
+    WOMEN.forEach(function (w) {
+      const s = currentState.people[w];
+      if (!s || !s.where) return;
+      const e = bp[w] || {};
+      const tz = (e.place && String(e.place).trim() === s.where && e.tz) ? String(e.tz).trim().slice(0, 60) : ROOM_TZ;
+      places[w] = { place: s.where, tz: tz };
+    });
+  } catch (e) { currentState = null; }
+  if (!myPlace) myPlace = (currentState && currentState.people.adger && currentState.people.adger.where) || "Greece";
   let placeTerms = "";
   present.forEach(function (w) { placeTerms += " " + places[w].place; });
   // presence-scoped loading: shared + only present women's canon
@@ -528,11 +575,9 @@ export default async function handler(req, res) {
     system += "\n\n=====================================================================\n\n" + AMBIENT.join("\n");
     messages = mergeConsecutive(messages.concat([{ role: "user", content: "(Adger is quiet just now. Continue - someone does or says something unprompted.)" }]));
   }
-  let currentState = null;
-  try {
-    currentState = await roomState.loadState();
+  if (currentState) {
     system += "\n\n=====================================================================\n\n" + roomState.stateBlockText(currentState);
-  } catch (e) { currentState = null; }
+  }
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -549,7 +594,10 @@ export default async function handler(req, res) {
     var stateChanges = [];
     if (currentState) {
       try {
-        var transitions = roomState.parseStateDirectives(reply);
+        // women may move themselves; nobody moves Adger but Adger
+        var transitions = roomState.parseStateDirectives(reply)
+          .map(function (t) { if (t.who === "adger") t.where = ""; return t; })
+          .filter(function (t) { return !!(t.where || t.doing); });
         if (transitions.length) {
           stateChanges = roomState.applyTransitions(currentState, transitions);
           await roomState.saveState(currentState);
