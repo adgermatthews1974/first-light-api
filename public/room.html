@@ -417,6 +417,10 @@
   .setfoot{display:flex;justify-content:flex-end;align-items:center;gap:14px;padding-bottom:20px}
   #setmsg{color:var(--ember-hi);font-style:italic;font-size:14px}
   #rhdays{display:flex;flex-wrap:wrap;margin-bottom:4px}
+  .pushstate{font-size:15px;color:var(--bone);margin:2px 0 10px}
+  .pushstate.on{color:#9fd49a} .pushstate.off{color:var(--ash)}
+  .pushbtns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+  .pushbtns .tool[hidden]{display:none}
   label.chk{margin-right:10px}
   @media(max-width:760px){ .notescards{grid-template-columns:1fr} .note .nt{font-size:23px} .tllegend{margin-left:0} }
 
@@ -541,6 +545,20 @@
         <div class="mlabel">Notes</div>
         <label class="chk"><input type="checkbox" id="nton"> Leave me notes when I have been away</label>
         <label>after <input type="number" id="nthours" min="1" max="72" step="1"> hours away</label>
+      </section>
+      <section>
+        <div class="mlabel">Your phone</div>
+        <div class="pushstate" id="pushstate">Checking this device&hellip;</div>
+        <div class="pushbtns">
+          <button class="tool" id="pushOnBtn">Let them reach this device</button>
+          <button class="tool" id="pushOffBtn" hidden>Stop on this device</button>
+          <button class="tool" id="pushTestBtn">Send a test</button>
+          <button class="tool" id="pushNowBtn">Have one of them text me now</button>
+        </div>
+        <label class="chk"><input type="checkbox" id="pushon"> They can reach out</label>
+        <label>How often <select id="pushpace"><option value="rarely">Rarely</option><option value="natural">When it feels natural</option><option value="often">Often</option></select></label>
+        <label>Quiet from <input type="time" id="qfrom"></label><label>to <input type="time" id="qto"></label>
+        <div class="sethelp">They never text while you are in the room and never in quiet hours. Each text is one model call; the test costs nothing. Do this once on each device you want them to reach.</div>
       </section>
       <section>
         <div class="mlabel">The house</div>
@@ -1932,6 +1950,7 @@
   }
   function openSettings(){
     document.getElementById('setwrap').hidden = false;
+    pushRefresh();
     document.getElementById('setmsg').textContent = 'Loading…';
     opCall('settings').then(function(d){ setData = d.settings; renderSettings(); document.getElementById('setmsg').textContent=''; })
       .catch(function(){ document.getElementById('setmsg').textContent = 'Could not load the settings.'; });
@@ -1968,6 +1987,11 @@
     document.getElementById('emalone').value = S.ember.aloneHours;
     document.getElementById('emrest').value = S.ember.restHours;
     document.getElementById('hold').value = S.holdHours;
+    var PS = S.push || { on:true, quietFrom:'23:00', quietTo:'08:00', pace:'natural' };
+    document.getElementById('pushon').checked = PS.on !== false;
+    document.getElementById('pushpace').value = PS.pace || 'natural';
+    document.getElementById('qfrom').value = PS.quietFrom || '23:00';
+    document.getElementById('qto').value = PS.quietTo || '08:00';
     placeOptions(document.getElementById('evplace'), '');
   }
   document.getElementById('evadd').addEventListener('click', function(){
@@ -1993,6 +2017,11 @@
     S.ember.aloneHours = Number(document.getElementById('emalone').value) || S.ember.aloneHours;
     S.ember.restHours = Number(document.getElementById('emrest').value) || S.ember.restHours;
     S.holdHours = Number(document.getElementById('hold').value) || S.holdHours;
+    S.push = S.push || {};
+    S.push.on = document.getElementById('pushon').checked;
+    S.push.pace = document.getElementById('pushpace').value;
+    S.push.quietFrom = document.getElementById('qfrom').value || S.push.quietFrom;
+    S.push.quietTo = document.getElementById('qto').value || S.push.quietTo;
     document.getElementById('setmsg').textContent = 'Saving…';
     opCall('settingsSave', { settings: S }).then(function(d){
       setData = d.settings; renderSettings();
@@ -2000,6 +2029,82 @@
       peekRoom({});
     }).catch(function(){ document.getElementById('setmsg').textContent = 'Could not save.'; });
   });
+
+  /* =====================================================================
+     YOUR PHONE: let them reach this device
+     ===================================================================== */
+  function pushMsg(t, cls){ var e=document.getElementById('pushstate'); e.textContent=t; e.className='pushstate'+(cls?' '+cls:''); }
+  function b64ToBytes(s){
+    s = s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length % 4) s += '=';
+    var raw = atob(s), out = new Uint8Array(raw.length);
+    for(var i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+  function deviceLabel(){
+    var u = navigator.userAgent || '';
+    if(/Android/i.test(u)) return 'Android phone';
+    if(/iPhone|iPad/i.test(u)) return 'iPhone';
+    return 'Desktop';
+  }
+  function pushSupported(){ return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window); }
+  async function pushReg(){
+    var reg = await navigator.serviceWorker.getRegistration('/room');
+    if(!reg){ reg = await navigator.serviceWorker.register('/room-sw.js', {scope:'/room'}); }
+    return reg;
+  }
+  async function pushRefresh(){
+    var on = document.getElementById('pushOnBtn'), off = document.getElementById('pushOffBtn');
+    if(!pushSupported()){ pushMsg("This browser can't receive notifications.", 'off'); on.hidden=true; off.hidden=true; return; }
+    try{
+      var reg = await pushReg();
+      var sub = await reg.pushManager.getSubscription();
+      if(sub && Notification.permission === 'granted'){ pushMsg('On for this device.', 'on'); on.hidden=true; off.hidden=false; }
+      else if(Notification.permission === 'denied'){ pushMsg('Notifications are blocked for this site. Allow them in the browser or app settings, then try again.', 'off'); on.hidden=false; off.hidden=true; }
+      else { pushMsg('Off for this device.', 'off'); on.hidden=false; off.hidden=true; }
+    }catch(e){ pushMsg('Could not check this device.', 'off'); }
+  }
+  async function pushEnable(){
+    try{
+      if(!pushSupported()) return pushRefresh();
+      var perm = await Notification.requestPermission();
+      if(perm !== 'granted'){ return pushRefresh(); }
+      pushMsg('Connecting…');
+      var reg = await pushReg();
+      var k = await opCall('pushKey');
+      var sub = await reg.pushManager.getSubscription();
+      if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: b64ToBytes(k.publicKey) });
+      var r = await opCall('pushSubscribe', { subscription: sub.toJSON(), label: deviceLabel() });
+      var c = await caches.open('room-push'); await c.put('/room-push-token', new Response(r.token));
+      await pushRefresh();
+    }catch(e){ pushMsg('Could not turn it on: ' + (e && e.message ? e.message : 'error') + '.', 'off'); }
+  }
+  async function pushDisable(){
+    try{
+      var reg = await pushReg(); var sub = await reg.pushManager.getSubscription();
+      var c = await caches.open('room-push'); var t = await c.match('/room-push-token');
+      var token = t ? await t.text() : '';
+      if(token) await opCall('pushUnsubscribe', { token: token }).catch(function(){});
+      if(sub) await sub.unsubscribe();
+      await c.delete('/room-push-token');
+    }catch(e){}
+    pushRefresh();
+  }
+  document.getElementById('pushOnBtn').addEventListener('click', pushEnable);
+  document.getElementById('pushOffBtn').addEventListener('click', pushDisable);
+  document.getElementById('pushTestBtn').addEventListener('click', function(){
+    pushMsg('Sending a test…');
+    opCall('pushTest').then(function(d){
+      var n = d && d.delivery ? d.delivery.sent : 0;
+      pushMsg(n ? 'Test sent to ' + n + (n===1?' device':' devices') + '. It should arrive in a few seconds.' : 'No device is set up yet. Tap Let them reach this device first.', n ? 'on' : 'off');
+    }).catch(function(){ pushMsg('The test did not go out.', 'off'); });
+  });
+  document.getElementById('pushNowBtn').addEventListener('click', function(){
+    pushMsg('Asking one of them…');
+    opCall('tick', { force: true }).then(function(d){
+      pushMsg(d && d.sent ? 'One of them is texting you. Check your phone.' : (d && d.why === 'no devices' ? 'No device is set up yet.' : 'She thought about it and had nothing to say. Try again later.'), d && d.sent ? 'on' : 'off');
+    }).catch(function(){ pushMsg('That did not go out.', 'off'); });
+  });
+
   document.getElementById('btnSettings').addEventListener('click', openSettings);
   document.getElementById('setClose').addEventListener('click', closeSettings);
   document.getElementById('setwrap').addEventListener('click', function(e){ if(e.target === this) closeSettings(); });
