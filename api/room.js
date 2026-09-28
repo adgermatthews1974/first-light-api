@@ -91,18 +91,25 @@ function retrieve(chunks, query, k) {
     Object.keys(bag).forEach(function (t) { df[t] = (df[t] || 0) + 1; });
     return bag;
   });
-  function idf(t) { const d = df[t] || 0; return d ? Math.log(1 + N / d) : 0; }
+  // IDF with a floor. In this hub the most common words ARE the core of the
+  // saga (Kira, Garnath, the star), not noise - so they must never score zero.
+  function idf(t) { const d = df[t] || 0; return d ? Math.log(1 + N / d) + 0.35 : 0; }
   const distinctiveCut = Math.max(1, Math.floor(N / 3));
   const scored = chunks.map(function (c, i) {
     const bag = bags[i];
-    let score = 0, distinctive = false;
+    let score = 0, matched = 0, distinctive = false;
     Object.keys(qset).forEach(function (t) {
       if (bag[t]) {
         score += idf(t) * Math.min(bag[t], 3);
+        matched++;
         if ((df[t] || 0) <= distinctiveCut) distinctive = true;
       }
     });
-    return { c: c, score: distinctive ? score : 0 };
+    // a rare word is now a bonus, not a gate
+    if (distinctive) score *= 1.5;
+    // matching several of his words beats matching one word over and over
+    if (matched > 1) score *= (1 + 0.15 * (matched - 1));
+    return { c: c, score: score };
   });
   return scored
     .filter(function (s) { return s.score > 0; })
@@ -167,6 +174,8 @@ const DIRECTOR = [
   "- Sometimes Adger shares a photo - a concert, a family shot, something from their life. They can SEE it. React as themselves: recognise what and who is in it, remember the moment it came from if it is theirs, argue about it, laugh at it, be moved by it.",
   "- Say enough about WHAT IS ACTUALLY IN THE IMAGE that the moment survives in words - name what they see, who is in it, what was happening. Not a cold caption or an inventory; the way a person points at a photo and says the thing they notice. This is how the moment becomes a memory they keep.",
   "- Never invent something that is not in the picture, and never pretend to see one that was not shared.",
+  "",
+  "PUNCTUATION: never write an em dash or an en dash in anything they say. Use a comma, a full stop, or three dots for a beat that trails off.",
   "",
   "NEVER slide into helpful-assistant register. They are people, always mid-relationship with Adger. Within an ongoing conversation, do not re-greet him or speak as if only now meeting."
 ];
@@ -492,7 +501,19 @@ export default async function handler(req, res) {
       pool = pool.concat(priv);
     }
   } catch (e) { pool = []; }
-  const hits = retrieve(pool, (lastUser + " " + placeTerms).trim(), TOP_K);
+  // search on the last few things Adger said, not only the last line,
+  // so a follow-up like "what did she do then?" still finds its story
+  let recentUser = "";
+  let seenUser = 0;
+  for (let i = messages.length - 1; i >= 0 && seenUser < 3; i--) {
+    if (messages[i].role !== "user") continue;
+    const c = messages[i].content;
+    let t = "";
+    if (typeof c === "string") t = c;
+    else if (Array.isArray(c)) t = c.filter(function (b) { return b && b.type === "text"; }).map(function (b) { return b.text; }).join(" ");
+    if (t) { recentUser = t + " " + recentUser; seenUser++; }
+  }
+  const hits = retrieve(pool, (recentUser + " " + placeTerms).trim(), TOP_K);
   let memoryBlock = "";
   try { memoryBlock = await loadMemory(present); } catch (e) { memoryBlock = ""; }
   try { memoryBlock += await loadRelations(present); } catch (e) {}
@@ -541,6 +562,13 @@ export default async function handler(req, res) {
       }
     }
     reply = roomState.stripStateDirectives(reply);
+    // no em or en dashes reach the screen, ever: a dash that ends a line or a quote becomes
+    // three dots, one right after a speaker tag is dropped, the rest become commas
+    reply = reply
+      .replace(/:[ \t]*[\u2014\u2013][ \t]*/g, ": ")
+      .replace(/[ \t]*[\u2014\u2013][ \t]*(?=\n|$|["\u201D)])/g, "...")
+      .replace(/[ \t]*[\u2014\u2013][ \t]*/g, ", ")
+      .replace(/,[ \t]*([.!?,])/g, "$1");
     var directive = archive.parseDocumentDirective(reply);
     var documented = null;
     if(directive){
