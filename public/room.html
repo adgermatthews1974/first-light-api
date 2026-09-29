@@ -483,6 +483,20 @@
   .booktitle:hover{text-decoration:underline}
   .bookstatus{margin-top:8px;font-size:14px;color:var(--ash);font-style:italic}
   .bookperson{padding:7px 0;border-bottom:1px solid var(--edge)}
+  .memcard.mc-inner{background:rgba(24,18,17,.82)}
+  .insec{font-family:"Cinzel",serif;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ash-dim);margin:14px 0 5px}
+  .inmood{font-size:18px;line-height:1.45;color:var(--bone)}
+  .inwhy{font-size:14px;color:var(--ash);font-style:italic;margin-top:3px}
+  .inlist{margin:0;padding:0 0 0 18px;font-size:16px;line-height:1.5;color:var(--bone)}
+  .inlist li{margin:3px 0}
+  .inst{font-size:13px;color:var(--ash-dim);font-style:italic}
+  .inpair{padding:7px 0;border-bottom:1px solid var(--edge);font-size:16px;line-height:1.45;color:var(--bone)}
+  .inpair:last-of-type{border-bottom:0}
+  .inpair .intext{margin-top:2px}
+  .tone{display:inline-block;font-family:"Cinzel",serif;font-size:9px;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--edge);
+    border-radius:10px;padding:1px 7px;margin-left:8px;color:var(--ash);vertical-align:1px}
+  .tone.t-close{color:#e0b35a;border-color:#8a6d3b} .tone.t-easy{color:var(--pale-hi)}
+  .tone.t-friction{color:#d98a5a;border-color:#8a4a2c} .tone.t-tense{color:#e06a55;border-color:#b5392c}
   .bpn{display:block;font-family:"Cinzel",serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ember-hi);margin-bottom:2px}
   .bpl{font-size:15.5px;color:var(--bone);line-height:1.5}
   .bookfacts{margin:0;padding-left:18px;color:var(--bone);font-size:15.5px;line-height:1.55}
@@ -2219,13 +2233,97 @@
     c.appendChild(el('div','memtext', text && text.trim() ? text : 'Nothing yet.'));
     return c;
   }
+  /* ----- the inside of them: mood now, this week's wants, where they stand, how they are changing ----- */
+  var WANT_MARK = { done:'done', dropped:'let go', stalled:'stuck' };
+  var MOOD_LEVEL = { strong:'Still strong', 'carrying over':'Carried over, softer now', clear:'Clear', fading:'Fading', light:'Light' };
+  function weekName(key){
+    if(!key) return '';
+    try{ return new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',weekday:'long',day:'numeric',month:'long'}).format(new Date(key+'T12:00:00Z')); }catch(e){ return key; }
+  }
+  function pairRow(s, from){
+    var r=el('div','inpair'), head=el('div','');
+    if(from){
+      var o=s.a===from?s.b:s.a;
+      head.appendChild(el('span','arcname n-'+o,'With '+STATE_LABEL[o]));
+    } else {
+      head.appendChild(el('span','arcname n-'+s.a,STATE_LABEL[s.a]));
+      head.appendChild(el('span','inst',' and '));
+      head.appendChild(el('span','arcname n-'+s.b,STATE_LABEL[s.b]));
+    }
+    head.appendChild(el('span','tone t-'+s.tone,s.tone));
+    r.appendChild(head);
+    r.appendChild(el('div','intext',s.text));
+    if(s.eased) r.appendChild(el('div','inst','That was a few days ago. It may have eased by now.'));
+    return r;
+  }
+  function innerCard(t){
+    var I=memData.inner||{}, name=STATE_LABEL[t];
+    var c=el('div','memcard mc-'+t+' mc-inner');
+    c.appendChild(el('div','mlabel','How '+name+' is, inside'));
+    c.appendChild(el('div','memsub',"Her mood, what she wants this week, and where she stands with the others. What happens in the room sets it, not you."));
+    c.appendChild(el('div','insec','Right now'));
+    var m=(I.moods||{})[t];
+    if(m){
+      c.appendChild(el('div','inmood',m.text));
+      c.appendChild(el('div','inwhy', m.src==='day'
+        ? (m.why ? m.why+'. ' : '')+'Her ordinary weather today. Nothing in particular caused it.'
+        : (m.why ? 'Because '+m.why+'. ' : '')+(MOOD_LEVEL[m.level]||m.level)+', from '+m.ago+'.'));
+    } else c.appendChild(el('div','memnone','Nothing yet.'));
+    var items=(I.wants||{})[t]||[];
+    c.appendChild(el('div','insec','This week'+(I.week?', from '+weekName(I.week):'')));
+    if(items.length){
+      var ul=el('ul','inlist');
+      items.forEach(function(x){
+        var li=el('li','',x.text);
+        if(WANT_MARK[x.status]) li.appendChild(el('span','inst',' ('+WANT_MARK[x.status]+(x.note?': '+x.note:'')+')'));
+        else if(x.note) li.appendChild(el('span','inst',' ('+x.note+')'));
+        ul.appendChild(li);
+      });
+      c.appendChild(ul);
+    } else c.appendChild(el('div','memnone','Nothing set yet. Her week is worked out early each Monday, or when you start it over on the Together tab.'));
+    var mine=(I.standings||[]).filter(function(s){ return s.a===t||s.b===t; });
+    c.appendChild(el('div','insec','With the others'));
+    if(mine.length) mine.forEach(function(s){ c.appendChild(pairRow(s,t)); });
+    else c.appendChild(el('div','memnone','Nothing set yet.'));
+    var g=(I.growth||{})[t]||[];
+    if(g.length){
+      c.appendChild(el('div','insec','How she is changing'));
+      var gl=el('ul','inlist');
+      g.forEach(function(x){ var li=el('li','',x.text); if(x.since) li.appendChild(el('span','inst',' (since the week of '+weekName(x.since)+')')); gl.appendChild(li); });
+      c.appendChild(gl);
+    }
+    return c;
+  }
+  function standCard(){
+    var I=memData.inner||{};
+    var c=el('div','memcard mc-shared mc-inner');
+    c.appendChild(el('div','mlabel','Where they stand with each other this week'));
+    c.appendChild(el('div','memsub','Worked out early each Monday from what they have lived, and moved by what happens in the room.'+(I.week?' This week started '+weekName(I.week)+'.':'')));
+    var st=I.standings||[];
+    if(st.length) st.forEach(function(s){ c.appendChild(pairRow(s,null)); });
+    else c.appendChild(el('div','memnone','Nothing set yet. The first week is worked out within about fifteen minutes of this going live, or you can start it now.'));
+    var rb=el('button','tool','Start their week over');
+    rb.addEventListener('click',function(){
+      if(!confirm('Start their week over? Each of them gets new wants for the week, and where they stand with each other is worked out again from what they have lived.')) return;
+      rb.disabled=true; rb.textContent='Thinking it through...';
+      opCall('innerRefresh').then(function(d){
+        if(d && d.inner) memData.inner=d.inner;
+        if(d && d.ok){ if(memTab==='shared') drawMem('shared'); return; }
+        rb.disabled=false; rb.textContent=(d && d.why==='busy') ? 'Already on it, try again in a minute' : 'That did not work';
+      }).catch(function(){ rb.disabled=false; rb.textContent='That did not work'; });
+    });
+    c.appendChild(rb);
+    return c;
+  }
   function drawMem(t){
     var b=memBody();
     if(t==='shared'){
+      if(memData.inner) b.appendChild(standCard());
       b.appendChild(textCard('What they have lived together in this room','The shared thread, updated whenever a conversation is saved.', memData.mem.shared, 'mc-shared'));
       return;
     }
     var name=STATE_LABEL[t];
+    if(memData.inner) b.appendChild(innerCard(t));
     b.appendChild(textCard('What '+name+' carries', 'Her own thread of your life together, from her side.', memData.mem[t], 'mc-'+t));
     b.appendChild(textCard(name+"'s read on where she stands with you", "Private to her. In the story you can't see this, and she doesn't know you can.", memData.rel[t], 'mc-'+t+' mc-rel'));
   }
