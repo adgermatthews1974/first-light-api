@@ -2351,6 +2351,7 @@
   function booksCard(books){
     var c=el('div','memcard mc-books'); c.appendChild(el('div','mlabel','The books'));
     if(!books.length) c.appendChild(el('div','memsub',"No books loaded yet. Load a book file made from a manuscript. It goes straight into the room's private storage, never onto GitHub."));
+    c.appendChild(el('div','memsub',"Canon files (people and history they know) load with the same button and show up under Their canon below."));
     books.forEach(function(bk){
       var row=el('div','bookrow');
       var t=el('button','booktitle',bk.title); t.addEventListener('click',function(){ openBook(bk); }); row.appendChild(t);
@@ -2360,7 +2361,7 @@
     });
     var status=el('div','bookstatus');
     var input=document.createElement('input'); input.type='file'; input.accept='.json,application/json'; input.hidden=true;
-    var lb=el('button','tool','Load a book file'); lb.addEventListener('click',function(){ input.value=''; input.click(); });
+    var lb=el('button','tool','Load a book or canon file'); lb.addEventListener('click',function(){ input.value=''; input.click(); });
     input.addEventListener('change',function(){ if(input.files && input.files[0]) loadBookFile(input.files[0], status, lb); });
     c.appendChild(lb); c.appendChild(input); c.appendChild(status);
     return c;
@@ -2370,6 +2371,20 @@
     var fr=new FileReader();
     fr.onload=function(){
       var book; try{ book=JSON.parse(fr.result); }catch(e){ status.textContent='That file is not a book file.'; btn.disabled=false; return; }
+      if(book && book.format==='forge-canon-1' && Array.isArray(book.chunks)){
+        var at=0, per=25, name=book.title||'The canon file';
+        function nextPiece(){
+          if(at>=book.chunks.length) return Promise.resolve();
+          var part=book.chunks.slice(at, at+per); at+=per;
+          status.textContent='Loading '+name+': '+Math.min(at, book.chunks.length)+' of '+book.chunks.length;
+          return bookOp('knowledgePut',{ chunks:part }).then(nextPiece);
+        }
+        nextPiece().then(function(){
+          status.textContent=name+' is loaded. They know it.'; btn.disabled=false; knowData=null;
+          setTimeout(function(){ if(memTab==='know' && !document.getElementById('memwrap').hidden) showKnow(); }, 1600);
+        }).catch(function(e){ status.textContent='It did not load: '+(e && e.message ? e.message : 'error')+'. Loading it again is safe.'; btn.disabled=false; });
+        return;
+      }
       if(!book || book.format!=='forge-book-1' || !Array.isArray(book.chapters)){ status.textContent='That file is not a book file from the Forge.'; btn.disabled=false; return; }
       var meta={}; Object.keys(book).forEach(function(k){ if(k!=='chapters') meta[k]=book[k]; });
       meta.chapters=book.chapters.map(function(c){ return { key:c.key, label:c.label, title:c.title }; });
