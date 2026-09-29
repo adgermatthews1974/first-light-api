@@ -73,13 +73,19 @@ function terms(text) {
   });
   return out;
 }
-function retrieve(chunks, query, k) {
+// placeText: the rooms they are in. It helps a piece that already answers what he said;
+// on its own it only counts when a piece names two of those words (the lodge kitchen, say),
+// so standing in the kitchen never pulls a story that merely mentions a kitchen.
+function retrieve(chunks, query, k, placeText) {
   const N = chunks.length;
   if (!N) return [];
   const qterms = terms(query);
-  if (!qterms.length) return [];
+  const pterms = terms(placeText || "");
+  if (!qterms.length && !pterms.length) return [];
   const qset = {};
   qterms.forEach(function (t) { qset[t] = true; });
+  const pset = {};
+  pterms.forEach(function (t) { if (!qset[t]) pset[t] = true; });
   const df = {};
   const bags = chunks.map(function (c) {
     const bag = {};
@@ -105,6 +111,12 @@ function retrieve(chunks, query, k) {
         if ((df[t] || 0) <= distinctiveCut) distinctive = true;
       }
     });
+    let placeScore = 0, placeHits = 0;
+    Object.keys(pset).forEach(function (t) {
+      if (bag[t]) { placeScore += idf(t) * Math.min(bag[t], 3); placeHits++; }
+    });
+    if (matched) score += placeScore * 0.5;
+    else if (placeHits >= 2) score = placeScore * 0.5;
     // a rare word is now a bonus, not a gate
     if (distinctive) score *= 1.5;
     // matching several of his words beats matching one word over and over
@@ -277,6 +289,12 @@ const CORE = {
 };
 
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+// who each of them is, as plain text for the weekly pass (Mirael's record-keeping duty left out)
+function coreTexts() {
+  const o = {};
+  WOMEN.forEach(function (w) { o[w] = CORE[w].filter(function (x) { return x.indexOf("DOCUMENTATION") !== 0; }).join("\n"); });
+  return o;
+}
 function bandFor(hour) {
   if (hour < 1) return "late night";
   if (hour < 5) return "the dead of night";
@@ -474,7 +492,7 @@ const NOTE_RULES = [
   "Output ONLY lines in exactly this form, one per note:",
   "NOTE: name | fridge or pillow or desk or text | HH:MM | the note itself"
 ].join("\n");
-async function writeNotes(state, settings, weather, roomLife, roomWeather, localStamp) {
+async function writeNotes(state, settings, weather, roomLife, roomWeather, localStamp, innerNote) {
   const due = state.notesDue;
   if (!due) return [];
   const from = new Date(due.from), to = new Date(due.to);
@@ -493,6 +511,7 @@ async function writeNotes(state, settings, weather, roomLife, roomWeather, local
     "WHAT THEIR TIME LOOKED LIKE WHILE HE WAS AWAY (the house's own record of their day):\n" + story,
     weather ? roomWeather.weatherNote(weather, to) : "",
     mem ? mem.trim() : "",
+    innerNote || "",
     before ? "NOTES THEY LEFT HIM BEFORE (do not repeat these):\n" + before : "",
     NOTE_RULES
   ].filter(Boolean).join("\n\n=====================================================================\n\n");
@@ -638,6 +657,7 @@ export default async function handler(req, res) {
   var roomSite = require("../lib/room-site");
   var roomYT = require("../lib/room-youtube");
   var roomBooks = require("../lib/room-books");
+  var roomInner = require("../lib/room-inner");
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.indexOf(origin) !== -1 ? origin : ALLOWED_ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Origin", allowOrigin);
@@ -667,6 +687,10 @@ export default async function handler(req, res) {
   const weatherP = roomWeather.getWeather(new Date()).catch(function () { return null; });
   // their settings and calendar; defaults if nothing is saved yet
   const settingsP = roomLife.loadSettings().catch(function () { return roomLife.cleanSettings({}); });
+  // what goes on inside them: moods, this week's wants, where they stand with each other.
+  // Read once, only by the parts that use it.
+  let innerP = null;
+  const getInner = function () { if (!innerP) innerP = roomInner.load().catch(function () { return null; }); return innerP; };
   // op: the page asking for notes, the timeline, or settings, with no scene to play
   const op = (typeof body.op === "string") ? body.op.slice(0, 20) : "";
   if (op === "pushInbox") {
@@ -806,7 +830,7 @@ export default async function handler(req, res) {
           const got = await redisCmd(["SET", "sim:notes:lock", "1", "NX", "EX", "90"]);
           if (got === "OK") {
             try {
-              const fresh = await writeNotes(currentState, settings, await weatherP, roomLife, roomWeather, roomState.localStamp);
+              const fresh = await writeNotes(currentState, settings, await weatherP, roomLife, roomWeather, roomState.localStamp, roomInner.houseNote(await getInner(), new Date(), settings));
               list = fresh.concat(await loadNotes());
               await saveNotes(list);
               const again = await roomState.loadState();
@@ -830,7 +854,12 @@ export default async function handler(req, res) {
         const mem = {}, rel = {};
         for (const w of WOMEN) { mem[w] = (await redisGet(MEM_PREFIX + w)) || ""; rel[w] = (await redisGet(REL_PREFIX + w)) || ""; }
         mem.shared = (await redisGet(MEM_PREFIX + "shared")) || "";
-        return res.status(200).json({ ok: true, mem: mem, rel: rel });
+        return res.status(200).json({ ok: true, mem: mem, rel: rel, inner: roomInner.view(await getInner(), new Date(), settings) });
+      }
+      if (op === "innerRefresh") {
+        // start their week over now: new wants, standings and growth from what they have lived
+        const wk = await roomInner.weekly(coreTexts(), new Date(), settings, true);
+        return res.status(200).json({ ok: !!wk.ran, why: wk.why || "", inner: roomInner.view(wk.inner || await roomInner.load(), new Date(), settings) });
       }
       if (op === "archiveList") {
         const idx = await archive.loadIndex();
@@ -930,6 +959,15 @@ export default async function handler(req, res) {
           try { if (await roomYT.due()) await roomYT.refresh(); } catch (e) {}
         }
         const say = function (why, sent) { return res.status(200).json({ ok: true, sent: !!sent, why: why }); };
+        // a new week inside them, once, early on Monday; on a knock of its own so no tick runs long
+        if (!force) {
+          try {
+            if (roomInner.weeklyDue(await getInner(), now)) {
+              const wk = await roomInner.weekly(coreTexts(), now, settings, false);
+              if (wk && wk.ran) return say("a new week");
+            }
+          } catch (e) {}
+        }
         if (P.on === false && !force) return say("off");
         const subs = await roomPush.loadSubs();
         if (!subs.length) return say("no devices");
@@ -954,7 +992,7 @@ export default async function handler(req, res) {
         const emberLine2 = roomState.emberNote(currentState, relationTo, now);
         let ytNote = "";
         try { ytNote = await roomYT.channelNote(); } catch (e) {}
-        const msg = await writeText(currentState, settings, who, await weatherP, roomLife, roomWeather, roomState.localStamp, [cal, emberLine2, ytNote].filter(Boolean).join("\n\n"));
+        const msg = await writeText(currentState, settings, who, await weatherP, roomLife, roomWeather, roomState.localStamp, [cal, emberLine2, ytNote, roomInner.personNote(await getInner(), who, now, settings)].filter(Boolean).join("\n\n"));
         const again = await roomState.loadState();
         again.lastPushAt = now.toISOString();
         again.pushDay = dayKey;
@@ -975,6 +1013,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: String((e && e.message) || e) });
     }
   }
+  getInner();
   let placeTerms = "";
   present.forEach(function (w) { placeTerms += " " + places[w].place; });
   // presence-scoped loading: shared + only present women's canon
@@ -1001,10 +1040,12 @@ export default async function handler(req, res) {
     else if (Array.isArray(c)) t = c.filter(function (b) { return b && b.type === "text"; }).map(function (b) { return b.text; }).join(" ");
     if (t) { recentUser = t + " " + recentUser; seenUser++; }
   }
-  const hits = retrieve(pool, (recentUser + " " + placeTerms).trim(), TOP_K);
+  const hits = retrieve(pool, recentUser.trim(), TOP_K, placeTerms);
+  const inner = await getInner();
   let memoryBlock = "";
   try { memoryBlock = await loadMemory(present); } catch (e) { memoryBlock = ""; }
   try { memoryBlock += await loadRelations(present); } catch (e) {}
+  try { memoryBlock += roomInner.weekBlock(inner, present, new Date()); } catch (e) {}
   // the books he wrote: a line each, always; the scenes themselves only when the talk turns there
   let booksGist = "", bookRecall = "";
   try {
@@ -1036,6 +1077,9 @@ export default async function handler(req, res) {
   if (currentState) {
     system += "\n\n=====================================================================\n\n" + roomState.stateBlockText(currentState);
   }
+  let moodLines = "";
+  try { moodLines = roomInner.moodBlock(inner, present, new Date(), settings); } catch (e) {}
+  if (moodLines) system += "\n\n=====================================================================\n\n" + moodLines;
   try {
     const ytSnap = await roomYT.snapshot();
     const ytTalk = /youtube|channel|video|views|subscri|comment|upload|premiere|algorithm|single|release|numbers|fans/i.test(recentUser);
@@ -1098,7 +1142,12 @@ export default async function handler(req, res) {
         stateChanges = [{ error: String((e && e.message) || e) }];
       }
     }
-    reply = roomState.stripStateDirectives(reply);
+    // what the scene left them feeling: kept for the ones who were there, and it fades on its own
+    try {
+      const moods = roomInner.parseMood(reply);
+      if (moods.length) await roomInner.applyMoods(moods, present, new Date(), "room");
+    } catch (e) {}
+    reply = roomInner.stripMood(roomState.stripStateDirectives(reply));
     // no em or en dashes reach the screen, ever: a dash that ends a line or a quote becomes
     // three dots, one right after a speaker tag is dropped, the rest become commas
     reply = reply
