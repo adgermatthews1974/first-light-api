@@ -79,7 +79,7 @@
   .rail-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
   .bk{font-family:"Cinzel",serif;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ash-dim)}
   .sub{font-size:13px;color:var(--ash-dim);font-style:italic;margin-top:3px}
-  .tools{display:flex;gap:8px}
+  .tools{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:100%}
   .tool{background:transparent;border:1px solid var(--edge);border-radius:6px;cursor:pointer;
     color:var(--ash);font-family:"Cinzel",serif;font-size:10px;letter-spacing:.12em;
     text-transform:uppercase;padding:7px 11px}
@@ -234,6 +234,11 @@
   }
   /* any touch/no-hover device, regardless of width */
   @media(hover:none){ .locsel{opacity:1} }
+  /* the eight buttons become a tidy 4 by 2 grid on a phone, so none fall off the edge */
+  @media(max-width:760px){
+    .rail-top .tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:100%}
+    .rail-top .tools .tool{padding:9px 3px;font-size:9.5px;letter-spacing:.07em;line-height:1.25;min-height:38px;text-align:center}
+  }
 
   /* ===== THE ROOM ITSELF: the place Adger is in, its light and its weather ===== */
   .main{position:relative;isolation:isolate}
