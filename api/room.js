@@ -820,7 +820,9 @@ export default async function handler(req, res) {
     const w0 = await weatherP;
     let unread = [];
     try { unread = (await loadNotes()).filter(function (n) { return !n.read; }); } catch (e) {}
-    return res.status(200).json({ ok: true, peek: true, state: currentState, energy: ember, weather: w0, notes: unread, notesDue: !!(currentState && currentState.notesDue) });
+    let moods = null;
+    try { moods = roomInner.moodsView(await getInner(), new Date(), settings); } catch (e) {}
+    return res.status(200).json({ ok: true, peek: true, state: currentState, energy: ember, weather: w0, notes: unread, notesDue: !!(currentState && currentState.notesDue), moods: moods });
   }
   if (op) {
     try {
@@ -1143,10 +1145,13 @@ export default async function handler(req, res) {
       }
     }
     // what the scene left them feeling: kept for the ones who were there, and it fades on its own
+    let innerNow = inner;
     try {
       const moods = roomInner.parseMood(reply);
-      if (moods.length) await roomInner.applyMoods(moods, present, new Date(), "room");
+      if (moods.length) innerNow = (await roomInner.applyMoods(moods, present, new Date(), "room")) || inner;
     } catch (e) {}
+    let moodsOut = null;
+    try { moodsOut = roomInner.moodsView(innerNow, new Date(), settings); } catch (e) {}
     reply = roomInner.stripMood(roomState.stripStateDirectives(reply));
     // no em or en dashes reach the screen, ever: a dash that ends a line or a quote becomes
     // three dots, one right after a speaker tag is dropped, the rest become commas
@@ -1179,7 +1184,7 @@ export default async function handler(req, res) {
       }
       reply = archive.stripDocumentDirective(reply);
     }
-    return res.status(200).json({ reply, present, documented, state: currentState, stateChanges, weather, energy: ember });
+    return res.status(200).json({ reply, present, documented, state: currentState, stateChanges, weather, energy: ember, moods: moodsOut });
   } catch (e) {
     return res.status(500).json({ error: String(e) });
   }
