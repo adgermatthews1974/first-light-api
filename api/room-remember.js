@@ -123,6 +123,7 @@ async function updateKey(key, system, transcript) {
   return { key, ok: true };
 }
 export default async function handler(req, res) {
+  var roomInner = require("../lib/room-inner");
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.indexOf(origin) !== -1 ? origin : ALLOWED_ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Origin", allowOrigin);
@@ -152,11 +153,17 @@ export default async function handler(req, res) {
     tasks.push(updateKey(REL_PREFIX + w, relCurator(LABEL[w]), transcript));
   });
   tasks.push(updateKey(MEM_PREFIX + "shared", SHARED_CURATOR, transcript));
+  // what the conversation changed inside them: moods, this week's wants, where they stand.
+  // Runs alongside; if it fails, their memory is still saved and nothing is reported as lost.
+  const innerTask = present.length
+    ? roomInner.curate(present, transcript, new Date()).catch(function (e) { return { ok: false, detail: String((e && e.message) || e) }; })
+    : Promise.resolve({ ok: true, skipped: true });
   try {
     const results = await Promise.all(tasks);
+    const inner = await innerTask;
     const failed = results.filter(r => !r.ok);
-    if (failed.length) return res.status(502).json({ ok: false, updated: results.filter(r => r.ok).map(r => r.key), failed });
-    return res.status(200).json({ ok: true, updated: results.map(r => r.key) });
+    if (failed.length) return res.status(502).json({ ok: false, updated: results.filter(r => r.ok).map(r => r.key), failed, inner: !!inner.ok });
+    return res.status(200).json({ ok: true, updated: results.map(r => r.key), inner: !!inner.ok });
   } catch (e) {
     return res.status(500).json({ error: String(e) });
   }
