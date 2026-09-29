@@ -561,22 +561,34 @@ async function writeText(state, settings, who, weather, roomLife, roomWeather, l
     .replace(/\*[^*]{0,200}\*/g, "").trim().slice(0, 500);
 }
 
-function assembleSystem(present, hits, memoryBlock, presence) {
-  const blocks = [];
-  blocks.push(DIRECTOR.join("\n"));
-  blocks.push(CANON.join("\n"));
-  blocks.push(familyNote());
-  blocks.push("WHO IS IN THE ROOM, IN FULL (their identity; hold each distinct, never merge them):");
-  present.forEach(function (w) { blocks.push(CORE[w].join("\n")); });
-  blocks.push(presence);
+const RULE = "\n\n=====================================================================\n\n";
+// The prompt goes out in parts so Anthropic can cache what repeats: the house rules and
+// canon (changes only when a book loads or the month turns), who is in the room, and their
+// memory. Only the last part, this moment, is new each time. Same words, same order as before.
+function assembleSystem(present, hits, memoryBlock, presence, booksGist, bookRecall) {
+  const head = [DIRECTOR.join("\n"), CANON.join("\n")];
+  if (booksGist) head.push(booksGist);
+  head.push(familyNote());
+  const who = ["WHO IS IN THE ROOM, IN FULL (their identity; hold each distinct, never merge them):"];
+  present.forEach(function (w) { who.push(CORE[w].join("\n")); });
+  const tail = [presence];
   if (hits.length) {
     const k = ["KNOWLEDGE RELEVANT TO THIS MOMENT (retrieved; true and known to whoever it belongs to):"];
     hits.forEach(function (c) { k.push(labelFor(c.scope) + " " + c.text); });
-    blocks.push(k.join("\n\n"));
+    tail.push(k.join("\n\n"));
   }
-  if (memoryBlock) blocks.push(memoryBlock.trim());
-  blocks.push("Remember: output ONLY prefixed lines for PRESENT women (SELENE:/NYSERA:/MIRAEL:/TALIA:). Two to four women, one room, one thousand years. Never break character.");
-  return blocks.join("\n\n=====================================================================\n\n");
+  if (bookRecall) tail.push(bookRecall);
+  tail.push("Remember: output ONLY prefixed lines for PRESENT women (SELENE:/NYSERA:/MIRAEL:/TALIA:). Two to four women, one room, one thousand years. Never break character.");
+  return { head: head.join(RULE), who: who.join(RULE), memory: memoryBlock ? memoryBlock.trim() : "", tail: tail.join(RULE) };
+}
+function systemBlocks(parts, tail) {
+  const out = [
+    { type: "text", text: parts.head + RULE, cache_control: { type: "ephemeral" } },
+    { type: "text", text: parts.who + RULE, cache_control: { type: "ephemeral" } }
+  ];
+  if (parts.memory) out.push({ type: "text", text: parts.memory + RULE, cache_control: { type: "ephemeral" } });
+  out.push({ type: "text", text: tail });
+  return out;
 }
 const AMBIENT = [
   "AMBIENT BEAT: Adger has not said anything just now. Do not wait for him, and do not ask if he is there or call for him. Produce a small, spontaneous, in-character moment: one of the present women - occasionally two - does or says something unprompted, absorbed in their own life. Selene and Mirael especially stir up mischief, start a bit, needle each other, or do a thing just to see if they can. Keep it SHORT: one or two lines. He may be listening or not; let him choose to join. Same output format - only present women, name-prefixed lines."
@@ -604,6 +616,7 @@ export default async function handler(req, res) {
   var roomPush = require("../lib/room-push");
   var roomSite = require("../lib/room-site");
   var roomYT = require("../lib/room-youtube");
+  var roomBooks = require("../lib/room-books");
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.indexOf(origin) !== -1 ? origin : ALLOWED_ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Origin", allowOrigin);
@@ -822,6 +835,19 @@ export default async function handler(req, res) {
         const chunks = await loadScopeChunks(sc);
         return res.status(200).json({ ok: true, chunks: chunks.map(function (c) { return { id: c.id, title: c.title || "", text: c.text || "", url: c.url || "" }; }) });
       }
+      if (op === "booksList") return res.status(200).json({ ok: true, books: await roomBooks.list() });
+      if (op === "bookRead") {
+        const ch = await roomBooks.readChapter(String(body.id || ""), String(body.key || ""));
+        return ch ? res.status(200).json({ ok: true, chapter: ch }) : res.status(404).json({ error: "not found" });
+      }
+      if (op === "bookBegin" || op === "bookPart" || op === "bookCommit" || op === "bookDelete") {
+        let out;
+        if (op === "bookBegin") out = await roomBooks.begin(body.meta);
+        else if (op === "bookPart") out = await roomBooks.part(String(body.id || ""), body.chapter);
+        else if (op === "bookCommit") out = await roomBooks.commit(String(body.id || ""));
+        else out = await roomBooks.remove(String(body.id || ""));
+        return res.status(out.ok ? 200 : 400).json(out);
+      }
       if (op === "siteRefresh") return res.status(200).json(await roomSite.refresh());
       if (op === "ytRefresh") return res.status(200).json(await roomYT.refresh());
       if (op === "pushKey") return res.status(200).json({ ok: true, publicKey: (await roomPush.vapid()).publicKey });
@@ -925,7 +951,23 @@ export default async function handler(req, res) {
   let memoryBlock = "";
   try { memoryBlock = await loadMemory(present); } catch (e) { memoryBlock = ""; }
   try { memoryBlock += await loadRelations(present); } catch (e) {}
-  let system = assembleSystem(present, hits, memoryBlock, presenceNote(present, left, entered));
+  // the books he wrote: a line each, always; the scenes themselves only when the talk turns there
+  let booksGist = "", bookRecall = "";
+  try {
+    booksGist = await roomBooks.gist();
+    if (booksGist) {
+      let lastUser = "", lastReply = "";
+      for (let i = messages.length - 1; i >= 0 && (!lastUser || !lastReply); i--) {
+        const c = messages[i].content;
+        const t = typeof c === "string" ? c : (Array.isArray(c) ? c.filter(function (b) { return b && b.type === "text"; }).map(function (b) { return b.text; }).join(" ") : "");
+        if (messages[i].role === "user" && !lastUser) lastUser = t;
+        else if (messages[i].role === "assistant" && !lastReply) lastReply = t;
+      }
+      bookRecall = await roomBooks.recall([{ text: lastUser, w: 1 }, { text: recentUser, w: 0.5 }, { text: lastReply, w: 0.3 }], {});
+    }
+  } catch (e) { booksGist = ""; bookRecall = ""; }
+  const sysParts = assembleSystem(present, hits, memoryBlock, presenceNote(present, left, entered), booksGist, bookRecall);
+  let system = sysParts.tail;
   system += "\n\n=====================================================================\n\n" + [
     "WHERE EVERYONE IS, AND WHAT TIME IT IS THERE",
     placeNote(present, places, myPlace, myTz),
@@ -971,7 +1013,7 @@ export default async function handler(req, res) {
         "x-api-key": process.env.ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify({ model: MODEL, max_tokens: MAX_TOKENS, system: system, messages: messages }),
+      body: JSON.stringify({ model: MODEL, max_tokens: MAX_TOKENS, system: systemBlocks(sysParts, system), messages: messages }),
     });
     if (!r.ok) { const detail = await r.text(); return res.status(502).json({ error: "upstream " + r.status, detail }); }
     const data = await r.json();
