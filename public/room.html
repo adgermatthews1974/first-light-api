@@ -477,6 +477,17 @@
   .scopehead{margin-top:12px}
   .chunk{border-bottom:1px solid var(--edge);padding:10px 0}
   .chunkt{font-family:"Cinzel",serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ash);margin-bottom:4px}
+  .memcard.mc-books{border-left-color:#8a6d3b}
+  .bookrow{padding:6px 0 10px;border-bottom:1px solid var(--edge)}
+  .booktitle{background:none;border:0;padding:0;color:var(--bone);font-family:"EB Garamond",serif;font-size:19px;cursor:pointer;text-align:left}
+  .booktitle:hover{text-decoration:underline}
+  .bookstatus{margin-top:8px;font-size:14px;color:var(--ash);font-style:italic}
+  .bookperson{padding:7px 0;border-bottom:1px solid var(--edge)}
+  .bpn{display:block;font-family:"Cinzel",serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ember-hi);margin-bottom:2px}
+  .bpl{font-size:15.5px;color:var(--bone);line-height:1.5}
+  .bookfacts{margin:0;padding-left:18px;color:var(--bone);font-size:15.5px;line-height:1.55}
+  .bookded{margin-top:10px}
+  .bookrm{margin-top:4px}
 
   /* ===== THE LOCK ===== */
   .lock{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:24px;
@@ -2265,7 +2276,7 @@
   var SCOPE_LABEL = { shared:'Shared canon, all four know it', selene:"Selene's own", nysera:"Nysera's own", mirael:"Mirael's own", talia:"Talia's own", site:'The website' };
   function showKnow(){
     var b=memBody();
-    if(!knowData){ loading(b); opCall('knowledgeScopes').then(function(d){ knowData=d; if(memTab==='know') showKnow(); }).catch(function(){ memBody().appendChild(el('div','memnone','Could not open what they know.')); }); return; }
+    if(!knowData){ loading(b); Promise.all([opCall('knowledgeScopes'), opCall('booksList').catch(function(){ return { books: [] }; })]).then(function(r){ knowData=r[0]; knowData.books=(r[1] && r[1].books) || []; if(memTab==='know') showKnow(); }).catch(function(){ memBody().appendChild(el('div','memnone','Could not open what they know.')); }); return; }
     var K=knowData;
     // the channel
     var yc=el('div','memcard mc-yt'); yc.appendChild(el('div','mlabel','The channel'));
@@ -2299,6 +2310,8 @@
     } else { sc.appendChild(el('div','memsub','Not read yet. It reads itself once a day, or now:')); }
     var sb=el('button','tool','Read the website now'); sb.addEventListener('click',function(){ sb.textContent='Reading…'; opCall('siteRefresh').then(function(d){ knowData=null; showKnow(); }).catch(function(){ sb.textContent='That did not work'; }); });
     sc.appendChild(sb); b.appendChild(sc);
+    // the books he wrote
+    b.appendChild(booksCard(K.books || []));
     // canon
     var cc=el('div','memcard'); cc.appendChild(el('div','mlabel','Their canon, what the room can draw on'));
     var grid=el('div','scopegrid');
@@ -2325,6 +2338,112 @@
       }
       q.addEventListener('input',draw); draw();
     }).catch(function(){ memBody().appendChild(el('div','memnone','Could not open that.')); });
+  }
+  /* ----- the books: what Adger wrote, loaded from a book file ----- */
+  function bookOp(op, extra){
+    var body = Object.assign({ op: op }, extra || {});
+    return fetch(ENDPOINT, { method:'POST', cache:'no-store', headers:hdrs(), body: JSON.stringify(body) })
+      .then(function(res){
+        if(res.status===401){ showLock(badKey()); throw new Error('locked'); }
+        return res.json().catch(function(){ return {}; }).then(function(d){ if(!res.ok || !d.ok) throw new Error((d && d.error) || ('op '+res.status)); return d; });
+      });
+  }
+  function booksCard(books){
+    var c=el('div','memcard mc-books'); c.appendChild(el('div','mlabel','The books'));
+    if(!books.length) c.appendChild(el('div','memsub',"No books loaded yet. Load a book file made from a manuscript. It goes straight into the room's private storage, never onto GitHub."));
+    books.forEach(function(bk){
+      var row=el('div','bookrow');
+      var t=el('button','booktitle',bk.title); t.addEventListener('click',function(){ openBook(bk); }); row.appendChild(t);
+      var n=bk.counts||{};
+      row.appendChild(el('div','memsub',fmtN(n.chapters)+' chapters, '+fmtN(n.scenes)+' scenes, '+fmtN(n.words)+' words. Loaded '+when(bk.loadedAt)+'.'));
+      c.appendChild(row);
+    });
+    var status=el('div','bookstatus');
+    var input=document.createElement('input'); input.type='file'; input.accept='.json,application/json'; input.hidden=true;
+    var lb=el('button','tool','Load a book file'); lb.addEventListener('click',function(){ input.value=''; input.click(); });
+    input.addEventListener('change',function(){ if(input.files && input.files[0]) loadBookFile(input.files[0], status, lb); });
+    c.appendChild(lb); c.appendChild(input); c.appendChild(status);
+    return c;
+  }
+  function loadBookFile(file, status, btn){
+    btn.disabled=true; status.textContent='Reading the file...';
+    var fr=new FileReader();
+    fr.onload=function(){
+      var book; try{ book=JSON.parse(fr.result); }catch(e){ status.textContent='That file is not a book file.'; btn.disabled=false; return; }
+      if(!book || book.format!=='forge-book-1' || !Array.isArray(book.chapters)){ status.textContent='That file is not a book file from the Forge.'; btn.disabled=false; return; }
+      var meta={}; Object.keys(book).forEach(function(k){ if(k!=='chapters') meta[k]=book[k]; });
+      meta.chapters=book.chapters.map(function(c){ return { key:c.key, label:c.label, title:c.title }; });
+      var i=0;
+      function next(){
+        if(i>=book.chapters.length){ status.textContent='Putting it on their shelf...'; return bookOp('bookCommit',{ id:book.id }); }
+        var ch=book.chapters[i++]; status.textContent='Loading '+book.title+': '+ch.label+' ('+i+' of '+book.chapters.length+')';
+        return bookOp('bookPart',{ id:book.id, chapter:ch }).then(next);
+      }
+      bookOp('bookBegin',{ meta:meta }).then(next).then(function(){
+        status.textContent=book.title+' is loaded. They have read it.'; btn.disabled=false; knowData=null;
+        setTimeout(function(){ if(memTab==='know' && !document.getElementById('memwrap').hidden) showKnow(); }, 1600);
+      }).catch(function(e){ status.textContent='It did not load: '+(e && e.message ? e.message : 'error')+'. Nothing changed in the room. Try again.'; btn.disabled=false; });
+    };
+    fr.onerror=function(){ status.textContent='Could not read that file.'; btn.disabled=false; };
+    fr.readAsText(file);
+  }
+  function openBook(bk){
+    var b=memBody();
+    var back=el('button','tool','Back'); back.addEventListener('click',showKnow); b.appendChild(back);
+    var card=el('div','memcard mc-books');
+    card.appendChild(el('div','mlabel',bk.title));
+    if(bk.place) card.appendChild(el('div','memsub',bk.place));
+    if(bk.synopsis) card.appendChild(el('div','memtext',bk.synopsis));
+    if(bk.dedication) card.appendChild(el('div','memsub bookded',bk.dedication));
+    b.appendChild(card);
+    if((bk.people||[]).length){
+      var pc=el('div','memcard'); pc.appendChild(el('div','mlabel','Who is who'));
+      bk.people.forEach(function(p){ var r=el('div','bookperson'); r.appendChild(el('span','bpn',p.name)); r.appendChild(el('span','bpl',p.line)); pc.appendChild(r); });
+      b.appendChild(pc);
+    }
+    var cc=el('div','memcard'); cc.appendChild(el('div','mlabel','Chapters'));
+    var grid=el('div','scopegrid');
+    (bk.chapters||[]).forEach(function(c){
+      var t=el('button','scopebtn'); t.appendChild(el('span','scn',c.label)); if(c.title && c.title!==c.label) t.appendChild(el('span','scc',c.title));
+      t.addEventListener('click',function(){ openChapter(bk, c.key); }); grid.appendChild(t);
+    });
+    cc.appendChild(grid); b.appendChild(cc);
+    var rm=el('button','tool bookrm','Remove this book from the room');
+    rm.addEventListener('click',function(){
+      if(!confirm('Remove '+bk.title+' from the room? They will no longer remember it in detail. You can load it again any time.')) return;
+      rm.disabled=true; bookOp('bookDelete',{ id:bk.id }).then(function(){ knowData=null; showKnow(); }).catch(function(){ rm.textContent='That did not work'; rm.disabled=false; });
+    });
+    b.appendChild(rm);
+  }
+  function openChapter(bk, key){
+    var b=memBody(); loading(b);
+    opCall('bookRead',{ id:bk.id, key:key }).then(function(d){
+      var ch=d.chapter, bb=memBody();
+      var back=el('button','tool','Back to '+(bk.short||bk.title)); back.addEventListener('click',function(){ openBook(bk); }); bb.appendChild(back);
+      var card=el('div','memcard mc-books');
+      card.appendChild(el('div','mlabel',ch.label+(ch.title && ch.title!==ch.label ? ': '+ch.title : '')));
+      if(ch.summary) card.appendChild(el('div','memtext',ch.summary));
+      bb.appendChild(card);
+      if((ch.facts||[]).length){
+        var fc=el('div','memcard'); fc.appendChild(el('div','mlabel','What they would remember'));
+        var ul=document.createElement('ul'); ul.className='bookfacts'; ch.facts.forEach(function(f){ ul.appendChild(el('li','',f)); }); fc.appendChild(ul); bb.appendChild(fc);
+      }
+      if((ch.lines||[]).length){
+        var lc=el('div','memcard'); lc.appendChild(el('div','mlabel','Lines'));
+        ch.lines.forEach(function(l){ var r=el('div','ytc'); r.appendChild(el('div','ytca',l.who)); r.appendChild(el('div','ytct','"'+l.text+'"')); lc.appendChild(r); });
+        bb.appendChild(lc);
+      }
+      var sc=el('div','memcard'); sc.appendChild(el('div','mlabel','Scenes'));
+      (ch.scenes||[]).forEach(function(s){
+        var r=el('div','chunk');
+        r.appendChild(el('div','chunkt','Scene '+s.id+(s.head ? ', '+s.head : '')+(s.pov ? ', '+s.pov+"'s side" : '')));
+        var where=[]; if((s.present||[]).length) where.push('There: '+s.present.join(', ')); if(s.where) where.push(s.where); if(s.when) where.push(s.when);
+        if(where.length) r.appendChild(el('div','memsub',where.join('. ')));
+        if(s.summary) r.appendChild(el('div','memtext',s.summary));
+        sc.appendChild(r);
+      });
+      bb.appendChild(sc);
+    }).catch(function(){ memBody().appendChild(el('div','memnone','Could not open that chapter.')); });
   }
   document.getElementById('btnMemory').addEventListener('click', function(){ memData=null; arcList=null; knowData=null; openMemory(); });
   document.getElementById('memClose').addEventListener('click', closeMemory);
