@@ -140,6 +140,22 @@
     letter-spacing:.1em;text-transform:uppercase;color:var(--ash-dim);
     background:rgba(10,8,8,.7);padding:2px 6px;border-radius:10px;max-width:80%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* her mood on her portrait: a word and a dot. The dot says how strong it is. */
+  .who .mood{position:absolute;left:8px;right:8px;bottom:34px;z-index:3;display:flex;justify-content:center;pointer-events:none}
+  #wSelene .mood{color:var(--steel)} #wNysera .mood{color:var(--ember-hi)} #wMirael .mood{color:var(--violet-hi)} #wTalia .mood{color:var(--pale-hi)}
+  .who .mood .mb{pointer-events:auto;cursor:pointer;display:inline-flex;align-items:center;gap:6px;max-width:100%;min-width:0;
+    background:rgba(10,8,8,.66);border:0;border-radius:11px;padding:2px 9px 2px 7px;margin:0;color:inherit;font:inherit}
+  .who .mood .mt{font-family:"EB Garamond",serif;font-style:italic;font-size:13.5px;line-height:1.3;color:var(--bone);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .who .mood .md{flex:none;width:7px;height:7px;border-radius:50%;background:currentColor;box-sizing:border-box}
+  .who .mood.lv-strong .md{box-shadow:0 0 7px 1px currentColor;animation:moodpulse 2.6s ease-in-out infinite}
+  .who .mood.lv-carry .md{box-shadow:0 0 4px currentColor;opacity:.85}
+  .who .mood.lv-fading .md{opacity:.5}
+  .who .mood.lv-light .md{opacity:.5;width:5px;height:5px}
+  .who .mood.lv-day .md{background:transparent;border:1px solid currentColor;opacity:.75}
+  .who .mood.lv-day .mt,.who .mood.lv-fading .mt,.who .mood.lv-light .mt{color:var(--ash)}
+  @keyframes moodpulse{0%,100%{opacity:1}50%{opacity:.55}}
+  @media(prefers-reduced-motion:reduce){.who .mood.lv-strong .md{animation:none}}
 
   /* whisper bar */
   .whisperbar{flex:none;display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:9px 18px 2px}
@@ -215,6 +231,10 @@
       border-right:0;border-bottom:1px solid var(--edge);padding:10px}
     .who{aspect-ratio:1/1;flex:none;min-height:0}
     .who .nm{font-size:8px;padding:14px 4px 5px}
+    .who .mood{top:23px;bottom:auto;left:6px;right:6px;justify-content:flex-start}
+    .who .mood .mb{gap:4px;padding:1px 6px 1px 5px}
+    .who .mood .mt{font-size:11.5px}
+    .who .mood .md{width:5px;height:5px}
     /* the whole point: these must be able to shrink so .thread gets the scroll */
     .main{min-height:0}
     .rail{padding:11px 14px}
@@ -1254,6 +1274,35 @@
     for(var i=0;i<PLACES.length;i++){ if(PLACES[i].v===p) return PLACES[i].label; }
     return p.length>16 ? p.slice(0,15)+'\u2026' : p;
   }
+  /* how each of them is right now, on her portrait. Tap the word to see why. */
+  var MOOD_KEY='room-moods-v1', moods=null;
+  var MOOD_CLASS={strong:'lv-strong','carrying over':'lv-carry',clear:'lv-clear',fading:'lv-fading',light:'lv-light',day:'lv-day'};
+  var MOOD_SAY={strong:'still strong','carrying over':'carried over, softer now',clear:'clear',fading:'fading',light:'light'};
+  function renderMoods(){
+    WOMEN.forEach(function(w){
+      var tile=portraits[w], box=tile.querySelector('.mood'), m=moods && moods[w];
+      if(!m || !m.tag){ if(box) box.parentNode.removeChild(box); return; }
+      if(!box){
+        box=document.createElement('div');
+        var b=document.createElement('button'); b.type='button'; b.className='mb';
+        var d=document.createElement('i'); d.className='md'; b.appendChild(d);
+        var t=document.createElement('span'); t.className='mt'; b.appendChild(t);
+        b.addEventListener('click',function(e){ e.stopPropagation(); memTab=w; memData=null; openMemory(); });
+        box.appendChild(b); tile.appendChild(box);
+      }
+      box.className='mood '+(MOOD_CLASS[m.level]||'lv-day');
+      box.querySelector('.mt').textContent=m.tag;
+      var tip = m.src==='day' ? m.text+'. Her ordinary weather today.'
+        : m.text+(m.why?'. Because '+m.why:'')+'. '+(MOOD_SAY[m.level]||m.level)+(m.ago?', from '+m.ago:'')+'.';
+      var btn=box.querySelector('.mb'); btn.title=tip; btn.setAttribute('aria-label', LABEL[w]+': '+tip+' Tap for more.');
+    });
+  }
+  function setMoods(d){
+    if(!d || typeof d!=='object') return;
+    moods=d;
+    try{ localStorage.setItem(MOOD_KEY, JSON.stringify(moods)); }catch(e){}
+    renderMoods();
+  }
   function renderHereBadges(){
     WOMEN.forEach(function(w){
       var el=portraits[w], b=el.querySelector('.here');
@@ -1714,6 +1763,7 @@
   function applyExtras(data){
     if(!data) return;
     handleNotes(data);
+    if(data.moods) setMoods(data.moods);
     if(data.energy && typeof data.energy.level==='number'){
       ember=data.energy; emberAt=Date.now();
       try{ localStorage.setItem(EMBER_KEY, JSON.stringify({e:ember, at:emberAt})); }catch(e){}
@@ -2280,7 +2330,7 @@
         ul.appendChild(li);
       });
       c.appendChild(ul);
-    } else c.appendChild(el('div','memnone','Nothing set yet. Her week is worked out early each Monday, or when you start it over on the Together tab.'));
+    } else c.appendChild(el('div','memnone','Nothing set yet. Her week is worked out each Monday, or when you start it over on the Together tab.'));
     var mine=(I.standings||[]).filter(function(s){ return s.a===t||s.b===t; });
     c.appendChild(el('div','insec','With the others'));
     if(mine.length) mine.forEach(function(s){ c.appendChild(pairRow(s,t)); });
@@ -2298,10 +2348,10 @@
     var I=memData.inner||{};
     var c=el('div','memcard mc-shared mc-inner');
     c.appendChild(el('div','mlabel','Where they stand with each other this week'));
-    c.appendChild(el('div','memsub','Worked out early each Monday from what they have lived, and moved by what happens in the room.'+(I.week?' This week started '+weekName(I.week)+'.':'')));
+    c.appendChild(el('div','memsub','Worked out each Monday from what they have lived, and moved by what happens in the room.'+(I.week?' This week started '+weekName(I.week)+'.':'')));
     var st=I.standings||[];
     if(st.length) st.forEach(function(s){ c.appendChild(pairRow(s,null)); });
-    else c.appendChild(el('div','memnone','Nothing set yet. The first week is worked out within about fifteen minutes of this going live, or you can start it now.'));
+    else c.appendChild(el('div','memnone','Nothing set yet. Their first week is worked out at the next scheduled check, which can take a few hours, or you can start it now.'));
     var rb=el('button','tool','Start their week over');
     rb.addEventListener('click',function(){
       if(!confirm('Start their week over? Each of them gets new wants for the week, and where they stand with each other is worked out again from what they have lived.')) return;
@@ -2616,6 +2666,8 @@
   loadPres(); loadHist();
   lastSent = Object.assign({}, present);
   loadPlaces(); buildLocations(); renderHereBadges(); applySkin(); setInterval(applySkin, 600000);
+  try{ var mc=localStorage.getItem(MOOD_KEY); if(mc) moods=JSON.parse(mc); }catch(e){ moods=null; }
+  renderMoods();
   try{ var av=localStorage.getItem(AUTO_KEY); if(av!==null) autoOn = av==='1'; }catch(e){}
   try{ var sv=parseInt(localStorage.getItem(SAVED_KEY)||'0',10); savedAt = isNaN(sv)?0:Math.min(sv, history.length); }catch(e){ savedAt=0; }
   loadRoomState(); renderState(); setInterval(function(){ renderState(); }, 60000);
