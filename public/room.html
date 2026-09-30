@@ -487,6 +487,50 @@
   .ytcl{margin-top:14px} .ytc{padding:6px 0 8px;border-bottom:1px solid var(--edge)}
   .ytca{font-size:12.5px;color:var(--ash-dim)} .ytct{font-size:15.5px;color:var(--bone)}
   .memcard .tool{margin-top:12px}
+  .memcard.mc-studio{border-left-color:#d65a3f}
+  .stok{color:#e0b35a;font-style:italic;margin:0 0 8px}
+  .stnote{font-size:13px;color:var(--ash-dim);font-style:italic;margin:2px 0 4px}
+  .sterr{font-size:12.5px;color:var(--ash-dim);font-style:italic;margin-top:8px}
+  .stbtns{display:flex;flex-wrap:wrap;gap:8px}
+  .stgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px;margin:4px 0 6px}
+  .sttile{border:1px solid var(--edge);border-radius:8px;padding:10px 12px;background:rgba(10,8,8,.45);min-width:0}
+  .stl{font-family:"Cinzel",serif;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ash-dim)}
+  .stv{font-size:26px;color:var(--bone);line-height:1.15;margin-top:4px}
+  .std{font-size:13px;color:var(--ash);margin-top:2px}
+  .sts{font-size:12.5px;color:var(--ash-dim);font-style:italic;margin-top:2px}
+  .stlegend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--ash);margin:0 0 6px}
+  .stlegend .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+  .sw-now{background:#d65a3f} .sw-prev{background:#6b605a}
+  .stchart{position:relative;margin:4px 0 2px;min-height:40px}
+  .stchart svg{display:block;overflow:visible;touch-action:pan-y;font-family:"EB Garamond",Georgia,serif;font-variant-numeric:tabular-nums}
+  .stchart svg:focus{outline:1px solid var(--edge);outline-offset:3px}
+  .sttip{position:absolute;pointer-events:none;background:#0d0a09;border:1px solid var(--edge);border-radius:6px;padding:6px 9px;font-size:13px;line-height:1.35;color:var(--ash);white-space:nowrap;z-index:2;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+  .sttip b{color:var(--bone);font-weight:600;font-size:15px}
+  .sttip[hidden]{display:none}
+  .stsec{font-family:"Cinzel",serif;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ash-dim);margin:14px 0 6px}
+  .stsec:first-of-type{margin-top:4px}
+  .stbars{display:flex;flex-direction:column;gap:9px;margin:4px 0}
+  .stbt{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14.5px;color:var(--bone)}
+  .stbn{min-width:0;overflow-wrap:anywhere}
+  .stbv{color:var(--ash);font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .stbtrack{height:8px;margin-top:3px}
+  .stbfill{height:8px;background:#d65a3f;border-radius:0 4px 4px 0}
+  .stmeter{height:8px;background:#3b1a16;border-radius:4px;margin:4px 0 12px;overflow:hidden}
+  .stmeter i{display:block;height:100%;background:#d65a3f;border-radius:0 4px 4px 0}
+  .stmline{display:flex;justify-content:space-between;gap:10px;font-size:14.5px;color:var(--bone)}
+  .stmline span:last-child{color:var(--ash);font-size:13px;white-space:nowrap}
+  .stvid{padding:10px 0 12px;border-top:1px solid var(--edge)}
+  .stvid:first-of-type{border-top:0;padding-top:2px}
+  .stvt{color:var(--bone);font-size:16px}
+  .stvm{color:var(--ash);font-size:13px;margin:2px 0 4px}
+  .sttable{margin-top:8px;font-size:13px;color:var(--ash)}
+  .sttable summary{cursor:pointer;color:var(--ash-dim);font-style:italic}
+  .sttable .scroll{max-height:260px;overflow:auto;margin-top:6px}
+  .sttable table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+  .sttable td,.sttable th{padding:3px 6px;border-bottom:1px solid var(--edge);text-align:right;font-weight:normal}
+  .sttable td:first-child,.sttable th:first-child{text-align:left}
+  .sttable th{color:var(--ash-dim)}
+  .sthear{white-space:pre-wrap;font-size:14px;line-height:1.55;color:var(--ash);margin-top:8px}
   .sitepages{display:flex;flex-wrap:wrap;gap:6px}
   .sitepage{font-size:13.5px;color:var(--ash);border:1px solid var(--edge);border-radius:14px;padding:3px 10px;text-decoration:none}
   .sitepage:hover{color:var(--bone);border-color:var(--bone)}
@@ -2249,7 +2293,7 @@
      MEMORY: what each of them carries, the archive, and what they know
      ===================================================================== */
   var memTab = 'selene', memData = null, arcList = null, knowData = null;
-  var MEM_TABS = [['selene','Selene'],['nysera','Nysera'],['mirael','Mirael'],['talia','Talia'],['shared','Together'],['archive','The archive'],['know','What they know']];
+  var MEM_TABS = [['selene','Selene'],['nysera','Nysera'],['mirael','Mirael'],['talia','Talia'],['shared','Together'],['archive','The archive'],['know','What they know'],['studio','Channel in depth']];
   function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; }
   function when(iso){
     var t=Date.parse(iso||''); if(isNaN(t)) return '';
@@ -2272,6 +2316,7 @@
     var b=memBody();
     if(t==='archive'){ return showArchive(); }
     if(t==='know'){ return showKnow(); }
+    if(t==='studio'){ return showStudio(); }
     if(memData){ return drawMem(t); }
     loading(b);
     opCall('memoryView').then(function(d){ memData=d; if(memTab===t) drawMem(t); }).catch(function(){ memBody().appendChild(el('div','memnone','Could not open their memory.')); });
@@ -2420,6 +2465,302 @@
     }).catch(function(){ memBody().appendChild(el('div','memnone','Could not open that record.')); });
   }
 
+  /* ----- the channel in depth: YouTube Studio, through one Google sign-in kept on the server ----- */
+  var studioData = null, studioNotice = '', studioCharts = [], studioRz = null;
+  var SV_NOW = '#d65a3f', SV_NOW_HI = '#ee8466', SV_PREV = '#6b605a', SV_PREV_HI = '#91847d', SV_GRID = '#2c2422', SV_TXT = '#7b7065', SV_HAIR = '#5a4f4a', SV_SURF = '#120e0d';
+  function sDur(sec){ sec=Math.round(sec||0); return Math.floor(sec/60)+':'+('0'+(sec%60)).slice(-2); }
+  function sHrs(min){ var h=(min||0)/60; return h<10 ? String(Math.round(h*10)/10) : fmtN(Math.round(h)); }
+  function sPct(a,b){ return b>0 ? Math.round(a/b*100) : 0; }
+  function sDelta(a,b){ if(!(b>0)) return a>0 ? 'new this month' : ''; var c=Math.round((a-b)/b*100); if(Math.abs(c)<3) return 'about the same'; return (c>0?'\u25b2 +':'\u25bc ')+c+'%'; }
+  function sDay(key, withDay){
+    try{ var o={timeZone:'UTC',day:'numeric',month:'short'}; if(withDay) o.weekday='short'; return new Intl.DateTimeFormat('en-GB',o).format(new Date(key+'T12:00:00Z')); }catch(e){ return key; }
+  }
+  function sAgo(iso){
+    var t=Date.parse(iso||''); if(isNaN(t)) return ''; var h=(Date.now()-t)/3600000;
+    if(h<24) return 'today'; var d=Math.round(h/24); return d===1?'yesterday':d+' days ago';
+  }
+  function sNice(v){ if(v<=5) return 5; var p=Math.pow(10,Math.floor(Math.log(v)/Math.LN10)), m=v/p; return (m<=1?1:m<=2?2:m<=5?5:10)*p; }
+  function svgEl(tag, attrs){ var e=document.createElementNS('http://www.w3.org/2000/svg',tag); for(var k in attrs){ if(attrs.hasOwnProperty(k)) e.setAttribute(k, attrs[k]); } return e; }
+  function svgText(svg, x, y, anchor, text){ var t=svgEl('text',{x:x,y:y,'text-anchor':anchor,fill:SV_TXT,'font-size':12}); t.textContent=text; svg.appendChild(t); }
+  function colPath(x, y, w, base){
+    var r=Math.min(4, w/2, Math.max(0, base-y));
+    return 'M'+x+','+base+'V'+(y+r)+'Q'+x+','+y+' '+(x+r)+','+y+'H'+(x+w-r)+'Q'+(x+w)+','+y+' '+(x+w)+','+(y+r)+'V'+base+'Z';
+  }
+  function sTip(box){ var t=el('div','sttip'); t.hidden=true; box.appendChild(t); return t; }
+  function sTipAt(t, box, x, y, lines){
+    t.innerHTML='';
+    lines.forEach(function(l, i){ var d=el('div'); if(i===0) d.appendChild(el('b','',l)); else d.textContent=l; t.appendChild(d); });
+    t.hidden=false;
+    var bw=box.clientWidth, tw=t.offsetWidth, th=t.offsetHeight;
+    t.style.left=Math.max(0, Math.min(bw-tw, x-tw/2))+'px';
+    t.style.top=(y-th-12 < 0 ? y+14 : y-th-12)+'px';
+  }
+  function sTile(label, value, delta, sub){
+    var t=el('div','sttile'); t.appendChild(el('div','stl',label)); t.appendChild(el('div','stv',value));
+    if(delta) t.appendChild(el('div','std',delta)); if(sub) t.appendChild(el('div','sts',sub)); return t;
+  }
+  function sBars(rows){
+    var box=el('div','stbars'), max=0;
+    rows.forEach(function(r){ if(r.v>max) max=r.v; });
+    rows.forEach(function(r){
+      var row=el('div','stbar'), t=el('div','stbt');
+      t.appendChild(el('span','stbn',r.name)); t.appendChild(el('span','stbv',r.label)); row.appendChild(t);
+      var tr=el('div','stbtrack'), f=el('div','stbfill'); f.style.width=(max>0 && r.v>0 ? Math.max(0.8, r.v/max*100) : 0)+'%';
+      tr.appendChild(f); row.appendChild(tr); box.appendChild(row);
+    });
+    return box;
+  }
+  function sTable(summary, heads, rows){
+    var d=el('details','sttable'); d.appendChild(el('summary','',summary));
+    var sc=el('div','scroll'), tb=el('table'), hr=el('tr');
+    heads.forEach(function(h){ hr.appendChild(el('th','',h)); }); tb.appendChild(hr);
+    rows.forEach(function(r){ var tr=el('tr'); r.forEach(function(c){ tr.appendChild(el('td','',c)); }); tb.appendChild(tr); });
+    sc.appendChild(tb); d.appendChild(sc); return d;
+  }
+  /* views each day: the last 28 in ember, the 28 before in grey behind them */
+  function drawDaily(box, S){
+    box.innerHTML='';
+    var d=S.daily||[], n=d.length; if(!n) return;
+    var W=Math.max(240, box.clientWidth||300), H=168, L=40, R=6, T=10, B=24, base=H-B;
+    var max=0; d.forEach(function(x){ if(x[1]>max) max=x[1]; }); var top=sNice(max||1);
+    var svg=svgEl('svg',{width:W,height:H,viewBox:'0 0 '+W+' '+H,role:'img',tabindex:'0',
+      'aria-label':'Views each day. The last 28 days: '+fmtN(S.cur.views)+'. The 28 days before: '+fmtN((S.prev||{}).views||0)+'. Use the arrow keys to read each day.'});
+    [0,0.5,1].forEach(function(f){ var y=Math.round(base-(base-T)*f)+0.5; svg.appendChild(svgEl('line',{x1:L,x2:W-R,y1:y,y2:y,stroke:SV_GRID,'stroke-width':1})); svgText(svg, L-7, y+4, 'end', fmtN(Math.round(top*f))); });
+    var slot=(W-L-R)/n, bw=Math.max(1.5, Math.min(24, slot-2)), bars=[], firstNow=-1;
+    d.forEach(function(x, i){
+      var now=x[0]>=S.range.start; if(now && firstNow<0) firstNow=i;
+      var h=(base-T)*(x[1]/top), px=L+i*slot+(slot-bw)/2;
+      var p=svgEl('path',{d:colPath(px, base-h, bw, base),fill:now?SV_NOW:SV_PREV}); p._now=now; svg.appendChild(p); bars.push(p);
+    });
+    svgText(svg, L, H-6, 'start', sDay(d[0][0]));
+    if(firstNow>0 && W>330) svgText(svg, L+firstNow*slot, H-6, 'middle', sDay(d[firstNow][0]));
+    svgText(svg, W-R, H-6, 'end', sDay(d[n-1][0]));
+    box.appendChild(svg);
+    var tip=sTip(box), cur=-1;
+    function paint(i, hi){ if(i>=0) bars[i].setAttribute('fill', bars[i]._now ? (hi?SV_NOW_HI:SV_NOW) : (hi?SV_PREV_HI:SV_PREV)); }
+    function show(i){
+      if(i<0 || i>=n) return; paint(cur, false); cur=i; paint(i, true);
+      var x=d[i], h=(base-T)*(x[1]/top);
+      sTipAt(tip, box, L+i*slot+slot/2, base-h, [fmtN(x[1])+' views', sDay(x[0], true)+(bars[i]._now?'':', the 28 days before'), sHrs(x[2])+' hours watched'+(x[3] ? ', '+(x[3]>0?'+':'')+x[3]+' subscribers' : '')]);
+    }
+    function hide(){ paint(cur, false); cur=-1; tip.hidden=true; }
+    svg.addEventListener('pointermove', function(e){ var r=svg.getBoundingClientRect(); show(Math.max(0, Math.min(n-1, Math.floor((e.clientX-r.left-L)/slot)))); });
+    svg.addEventListener('pointerleave', hide); svg.addEventListener('blur', hide);
+    svg.addEventListener('keydown', function(e){
+      if(e.key==='ArrowRight'){ e.preventDefault(); show(cur<0 ? n-1 : Math.min(n-1, cur+1)); }
+      else if(e.key==='ArrowLeft'){ e.preventDefault(); show(cur<0 ? n-1 : Math.max(0, cur-1)); }
+    });
+  }
+  /* how many are still watching, from the first second to the last */
+  function drawCurve(box, v){
+    box.innerHTML='';
+    var c=(v.retention && v.retention.curve) || []; if(c.length<2) return;
+    var W=Math.max(240, box.clientWidth||300), H=128, L=40, R=8, T=10, B=22, base=H-B;
+    var top=1; c.forEach(function(y){ if(y>top) top=y; }); top=Math.ceil(top*10)/10;
+    function X(f){ return L+(W-L-R)*f; } function Y(y){ return base-(base-T)*(y/top); }
+    var svg=svgEl('svg',{width:W,height:H,viewBox:'0 0 '+W+' '+H,role:'img',tabindex:'0',
+      'aria-label':'How many viewers are still watching through '+v.title+'. Use the arrow keys to move along it.'});
+    [0,0.5,1].forEach(function(g){ var y=Math.round(Y(g))+0.5; svg.appendChild(svgEl('line',{x1:L,x2:W-R,y1:y,y2:y,stroke:SV_GRID,'stroke-width':1})); svgText(svg, L-7, y+4, 'end', Math.round(g*100)+'%'); });
+    var pts=c.map(function(y, i){ return [X(i/(c.length-1)), Y(y)]; });
+    var line='M'+pts.map(function(p){ return p[0].toFixed(1)+','+p[1].toFixed(1); }).join('L');
+    svg.appendChild(svgEl('path',{d:line+'L'+X(1).toFixed(1)+','+base+'L'+X(0).toFixed(1)+','+base+'Z',fill:SV_NOW,'fill-opacity':'0.1'}));
+    svg.appendChild(svgEl('path',{d:line,fill:'none',stroke:SV_NOW,'stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'}));
+    svgText(svg, L, H-5, 'start', '0:00'); svgText(svg, W-R, H-5, 'end', sDur(v.durSec));
+    var hair=svgEl('line',{y1:T,y2:base,stroke:SV_HAIR,'stroke-width':1,visibility:'hidden'}); svg.appendChild(hair);
+    var dot=svgEl('circle',{r:4,fill:SV_NOW,stroke:SV_SURF,'stroke-width':2,visibility:'hidden'}); svg.appendChild(dot);
+    box.appendChild(svg);
+    var tip=sTip(box), cur=-1;
+    function show(i){
+      if(i<0 || i>=c.length) return; cur=i;
+      var p=pts[i]; hair.setAttribute('x1',p[0]); hair.setAttribute('x2',p[0]); hair.setAttribute('visibility','visible');
+      dot.setAttribute('cx',p[0]); dot.setAttribute('cy',p[1]); dot.setAttribute('visibility','visible');
+      var f=i/(c.length-1);
+      sTipAt(tip, box, p[0], p[1], [Math.round(c[i]*100)+'% still watching', 'at '+sDur(v.durSec*f)+', '+Math.round(f*100)+'% of the way in']);
+    }
+    function hide(){ cur=-1; hair.setAttribute('visibility','hidden'); dot.setAttribute('visibility','hidden'); tip.hidden=true; }
+    svg.addEventListener('pointermove', function(e){ var r=svg.getBoundingClientRect(); show(Math.max(0, Math.min(c.length-1, Math.round((e.clientX-r.left-L)/(W-L-R)*(c.length-1))))); });
+    svg.addEventListener('pointerleave', hide); svg.addEventListener('blur', hide);
+    svg.addEventListener('keydown', function(e){
+      if(e.key==='ArrowRight'){ e.preventDefault(); show(cur<0 ? 0 : Math.min(c.length-1, cur+1)); }
+      else if(e.key==='ArrowLeft'){ e.preventDefault(); show(cur<0 ? 0 : Math.max(0, cur-1)); }
+    });
+  }
+  function holdWords(v){
+    var r=v.retention, bits=[]; if(!r) return '';
+    if(r.loops) bits.push('people loop it, some watch it more than once');
+    if(r.still30!=null && !r.loops) bits.push('30 seconds in: '+r.still30+'% still watching');
+    if(r.stillHalf!=null && !r.loops) bits.push('halfway: '+r.stillHalf+'%');
+    if(r.drop && !r.loops) bits.push('the biggest drop is around '+sDur(r.drop.atSec));
+    if(r.rel!=null) bits.push(r.rel>=0.6 ? 'holds people better than most videos its length' : (r.rel<=0.4 ? 'loses people faster than most videos its length' : 'about usual for its length'));
+    return bits.join('  \u00b7  ');
+  }
+  function showStudio(){
+    var b=memBody();
+    if(!studioData){
+      loading(b);
+      opCall('studioStatus').then(function(d){ studioData=d; if(memTab==='studio') showStudio(); })
+        .catch(function(){ memBody().appendChild(el('div','memnone','Could not open the channel in depth.')); });
+      return;
+    }
+    var D=studioData, S=D.snap; studioCharts=[];
+    var head=el('div','memcard mc-studio'); head.appendChild(el('div','mlabel','The channel in depth'));
+    if(studioNotice){ head.appendChild(el('div','stok',studioNotice)); studioNotice=''; }
+    var btns=el('div','stbtns');
+    function connectBtn(label){
+      var cb=el('button','tool',label);
+      cb.addEventListener('click', function(){
+        cb.textContent='Opening Google\u2026';
+        opCall('studioStart').then(function(d){
+          if(d && d.ok && d.url){ location.href=d.url; return; }
+          cb.textContent=label; head.appendChild(el('div','sterr',(d && d.detail) || 'That did not work.'));
+        }).catch(function(){ cb.textContent='That did not work'; });
+      });
+      btns.appendChild(cb);
+    }
+    if(!D.configured){
+      head.appendChild(el('div','memsub','Not switched on yet. It needs a Google sign-in client saved in Vercel as YT_CLIENT_ID and YT_CLIENT_SECRET. The steps are in the setup note.'));
+    } else if(!D.connected){
+      head.appendChild(el('div','memtext','What YouTube Studio sees: watch time, how long people stay, where the views come from, who watches, Shorts against videos, and the money or the road to the Partner Program. Nysera keeps an eye on it; Mirael pulls the reports.'));
+      head.appendChild(el('div','memsub','Sign in as the Google account that owns the channel, and pick the channel if Google asks. Google will warn that it has not checked this app. It is yours: choose Advanced, then Go to The Room. Easiest on the computer.'));
+      connectBtn('Connect YouTube Studio');
+    } else if(D.broken){
+      head.appendChild(el('div','memsub',D.broken));
+      connectBtn('Connect again');
+    } else {
+      head.appendChild(el('div','ytstats',(D.channel || 'The channel')+(S ? '  \u00b7  the 28 days to '+sDay(S.range.end, true)+'  \u00b7  pulled '+when(S.at) : '')));
+      if(!S) head.appendChild(el('div','memsub','Connected. The first reading comes on the next check, or now:'));
+      else head.appendChild(el('div','stnote','YouTube takes about two days to settle its numbers, so the window ends two days ago. Changes are against the 28 days before ('+sDay(S.range.prevStart)+' to '+sDay(S.range.prevEnd)+').'));
+      if(D.pullError) head.appendChild(el('div','sterr','The last pull did not work: '+D.pullError));
+      var pb=el('button','tool','Pull the numbers now');
+      pb.addEventListener('click', function(){
+        pb.textContent='Pulling\u2026';
+        opCall('studioPull').then(function(d){ studioData=d; if(d.pull && !d.pull.ok) studioNotice='That pull did not work: '+(d.pull.detail || 'no answer'); showStudio(); })
+          .catch(function(){ pb.textContent='That did not work'; });
+      });
+      btns.appendChild(pb);
+      var xb=el('button','tool','Disconnect');
+      xb.addEventListener('click', function(){
+        if(!confirm('Disconnect YouTube Studio? The Room lets go of the sign-in and forgets these numbers. You can connect again any time.')) return;
+        opCall('studioDisconnect').then(function(){ studioData=null; showStudio(); });
+      });
+      btns.appendChild(xb);
+    }
+    head.appendChild(btns); b.appendChild(head);
+    if(!S || !D.connected || D.broken) return;
+    var c=S.cur || {}, p=S.prev || {};
+    // the month in numbers
+    var k=el('div','memcard'); k.appendChild(el('div','mlabel','Last 28 days'));
+    var g=el('div','stgrid'), net=(c.subsGained||0)-(c.subsLost||0), pnet=(p.subsGained||0)-(p.subsLost||0);
+    g.appendChild(sTile('Views', fmtN(c.views), sDelta(c.views, p.views)));
+    g.appendChild(sTile('Watch time', sHrs(c.minutes)+' h', sDelta(c.minutes, p.minutes)));
+    g.appendChild(sTile('Average view', sDur(c.avgDur), sDelta(c.avgDur, p.avgDur), Math.round(c.avgPct||0)+'% of a video'));
+    g.appendChild(sTile('Subscribers', (net>=0?'+':'')+fmtN(net), 'the 28 before: '+(pnet>=0?'+':'')+pnet, '+'+fmtN(c.subsGained)+' gained, '+fmtN(c.subsLost)+' lost'));
+    if(S.earning && S.money) g.appendChild(sTile('Revenue', '$'+S.money.revenue.toFixed(2), '', S.money.playbackCpm ? '$'+S.money.playbackCpm.toFixed(2)+' per 1,000 ad views' : ''));
+    if(S.subs!=null) g.appendChild(sTile('Subscribers in all', fmtN(S.subs), ''));
+    k.appendChild(g); b.appendChild(k);
+    // day by day
+    var dc=el('div','memcard'); dc.appendChild(el('div','mlabel','Views, day by day'));
+    var lg=el('div','stlegend'), l1=el('span'), l2=el('span');
+    l1.appendChild(el('span','sw sw-now')); l1.appendChild(document.createTextNode('Last 28 days'));
+    l2.appendChild(el('span','sw sw-prev')); l2.appendChild(document.createTextNode('The 28 days before'));
+    lg.appendChild(l1); lg.appendChild(l2); dc.appendChild(lg);
+    var dbox=el('div','stchart'); dc.appendChild(dbox); studioCharts.push({ box: dbox, fn: drawDaily, arg: S });
+    dc.appendChild(sTable('Day by day, as a table', ['Day','Views','Hours','Subscribers'], (S.daily||[]).slice().reverse().map(function(x){ return [sDay(x[0], true), fmtN(x[1]), sHrs(x[2]), (x[3]>0?'+':'')+x[3]]; })));
+    b.appendChild(dc);
+    // the newest uploads, and how they hold people
+    if(S.newest && S.newest.length){
+      var nc=el('div','memcard'); nc.appendChild(el('div','mlabel','The newest uploads, and how they hold people'));
+      S.newest.forEach(function(v){
+        var vd=el('div','stvid'); vd.appendChild(el('div','stvt',v.title || v.id));
+        if(v.tooNew){ vd.appendChild(el('div','stvm','Up '+sAgo(v.published)+'. Its numbers come in about two days after it goes up.')); nc.appendChild(vd); return; }
+        var meta=['up '+sAgo(v.published)];
+        if(v.views!=null) meta.push(fmtN(v.views)+' views');
+        if(v.avgDur) meta.push('people stay '+sDur(v.avgDur)+' ('+Math.round(v.avgPct||0)+'%)');
+        if(v.subs) meta.push('+'+fmtN(v.subs)+' subscribers');
+        vd.appendChild(el('div','stvm',meta.join('  \u00b7  ')));
+        if(v.retention && v.retention.curve){
+          var cb2=el('div','stchart'); vd.appendChild(cb2); studioCharts.push({ box: cb2, fn: drawCurve, arg: v });
+          vd.appendChild(el('div','stvm',holdWords(v)));
+        } else { vd.appendChild(el('div','stvm','How long people stay is not in yet.')); }
+        nc.appendChild(vd);
+      });
+      b.appendChild(nc);
+    }
+    // the month's best
+    if(S.top && S.top.length){
+      var tc=el('div','memcard'); tc.appendChild(el('div','mlabel','Best this month'));
+      var tbl=el('div','yttable');
+      S.top.forEach(function(v){
+        var r=el('div','ytrow'); r.appendChild(el('div','ytt',v.title || v.id));
+        r.appendChild(el('div','ytn',fmtN(v.views)+' views  \u00b7  '+sHrs(v.minutes)+' h  \u00b7  '+Math.round(v.avgPct||0)+'% watched  \u00b7  +'+fmtN(v.subs)+' subscribers'));
+        tbl.appendChild(r);
+      });
+      tc.appendChild(tbl); b.appendChild(tc);
+    }
+    // where the views come from
+    if(S.traffic && S.traffic.length){
+      var fc=el('div','memcard'); fc.appendChild(el('div','mlabel','Where the views come from'));
+      var tv=0; S.traffic.forEach(function(t){ tv+=t.views; });
+      var rows=S.traffic.filter(function(t){ return t.views>0; }).slice(0, 7).map(function(t){ return { name: t.name, v: t.views, label: sPct(t.views, tv)+'%  \u00b7  '+fmtN(t.views) }; });
+      var rest=0; S.traffic.slice(7).forEach(function(t){ rest+=t.views; });
+      if(rest>0) rows.push({ name: 'Everything else', v: rest, label: sPct(rest, tv)+'%  \u00b7  '+fmtN(rest) });
+      fc.appendChild(sBars(rows)); b.appendChild(fc);
+    }
+    // who watches
+    var wc=el('div','memcard'); wc.appendChild(el('div','mlabel','Who watches'));
+    var sv=0; (S.subscribed||[]).forEach(function(x){ sv+=x.views; });
+    if(sv){
+      wc.appendChild(el('div','stsec','Subscribed or not'));
+      wc.appendChild(sBars(S.subscribed.map(function(x){ return { name: x.key==='SUBSCRIBED' ? 'Subscribed' : 'Not subscribed', v: x.views, label: sPct(x.views, sv)+'%  \u00b7  stays '+sDur(x.avgDur) }; })));
+    }
+    var dv=0; (S.devices||[]).forEach(function(x){ dv+=x.views; });
+    if(dv){ wc.appendChild(el('div','stsec','On what')); wc.appendChild(sBars(S.devices.slice(0, 5).map(function(x){ return { name: x.name, v: x.views, label: sPct(x.views, dv)+'%' }; }))); }
+    if(S.countries && S.countries.length){ wc.appendChild(el('div','stsec','Where')); wc.appendChild(sBars(S.countries.slice(0, 8).map(function(x){ return { name: x.name, v: x.views, label: sPct(x.views, c.views)+'%  \u00b7  '+fmtN(x.views) }; }))); }
+    wc.appendChild(el('div','stsec','Age and gender, last 90 days'));
+    if(S.audience && S.audience.length){
+      wc.appendChild(sBars(S.audience.slice(0, 6).map(function(a){ return { name: (a.gender==='male' ? 'Men' : a.gender==='female' ? 'Women' : 'Another gender')+' '+a.age, v: a.pct, label: a.pct+'%' }; })));
+    } else { wc.appendChild(el('div','memsub','YouTube keeps this hidden until enough people have watched.')); }
+    b.appendChild(wc);
+    // shorts against videos
+    if(S.types && S.types.length){
+      var yc2=el('div','memcard'); yc2.appendChild(el('div','mlabel','Shorts against videos'));
+      yc2.appendChild(sBars(S.types.map(function(t){ return { name: t.name, v: t.views, label: fmtN(t.views)+' views  \u00b7  '+sHrs(t.minutes)+' h  \u00b7  +'+fmtN(t.subs)+' subscribers' }; })));
+      b.appendChild(yc2);
+    }
+    // money, or the road to it
+    var mc=el('div','memcard');
+    if(S.earning && S.money){
+      mc.appendChild(el('div','mlabel','Money, last 28 days'));
+      var M=S.money;
+      mc.appendChild(el('div','memtext','About $'+M.revenue.toFixed(2)+' estimated'+(M.ad ? ', $'+M.ad.toFixed(2)+' of it from ads' : '')+'.'));
+      mc.appendChild(el('div','memsub',fmtN(M.monetized)+' views showed ads'+(M.playbackCpm ? ', about $'+M.playbackCpm.toFixed(2)+' for every 1,000 of them' : '')+'. Estimates; YouTube settles the real figure each month.'));
+    } else if(S.year && S.year.ok){
+      mc.appendChild(el('div','mlabel','Toward the Partner Program'));
+      var meter=function(label, have, need){
+        var ln=el('div','stmline'); ln.appendChild(el('span','',label)); ln.appendChild(el('span','',fmtN(Math.floor(have))+' of '+fmtN(need)+(have>=need ? ', met' : ''))); mc.appendChild(ln);
+        var m=el('div','stmeter'), f=el('i'); f.style.width=Math.min(100, have/need*100)+'%'; m.appendChild(f); mc.appendChild(m);
+      };
+      if(S.subs!=null) meter('Subscribers', S.subs, 1000);
+      meter('Long-form watch hours, last 12 months', S.year.longHours, 4000);
+      meter('Shorts views, last 90 days', S.year.shortsViews90, 10000000);
+      mc.appendChild(el('div','memsub','It takes 1,000 subscribers and either the hours or the Shorts views. A lower tier opens at 500 subscribers and 3,000 hours. Approximate: YouTube counts only public videos. '+(S.moneyWhy ? 'Revenue: '+S.moneyWhy+'.' : '')));
+    }
+    if(mc.childNodes.length) b.appendChild(mc);
+    // since the start, and what the four of them hear
+    var ec=el('div','memcard');
+    if(S.life){ ec.appendChild(el('div','mlabel','Since the channel began')); ec.appendChild(el('div','ytstats',fmtN(S.life.views)+' views  \u00b7  '+sHrs(S.life.minutes)+' hours watched  \u00b7  +'+fmtN((S.life.subsGained||0)-(S.life.subsLost||0))+' subscribers')); }
+    if(S.moments && S.moments.length) ec.appendChild(el('div','ytmoment','Just happened: '+S.moments.join('; ')));
+    if(D.note){ var hd=el('details','sttable'); hd.appendChild(el('summary','','What the four of them know from this')); hd.appendChild(el('div','sthear',D.note)); ec.appendChild(hd); }
+    var errs=Object.keys(S.errors || {});
+    if(errs.length) ec.appendChild(el('div','sterr','Some parts did not come in this time: '+errs.map(function(k2){ return k2+' ('+S.errors[k2]+')'; }).join('; ')+'.'));
+    if(ec.childNodes.length) b.appendChild(ec);
+    studioCharts.forEach(function(ch){ ch.fn(ch.box, ch.arg); });
+  }
+  window.addEventListener('resize', function(){
+    if(studioRz) clearTimeout(studioRz);
+    studioRz=setTimeout(function(){ if(memTab==='studio' && !document.getElementById('memwrap').hidden) studioCharts.forEach(function(ch){ ch.fn(ch.box, ch.arg); }); }, 200);
+  });
+
   /* ----- what they know: canon, the website, the channel ----- */
   var SCOPE_LABEL = { shared:'Shared canon, all four know it', selene:"Selene's own", nysera:"Nysera's own", mirael:"Mirael's own", talia:"Talia's own", site:'The website' };
   function showKnow(){
@@ -2448,6 +2789,7 @@
     }
     if(K.youtubeKey){ var yb=el('button','tool','Check the channel now'); yb.addEventListener('click',function(){ yb.textContent='Checking…'; opCall('ytRefresh').then(function(){ knowData=null; showKnow(); }).catch(function(){ yb.textContent='That did not work'; }); }); yc.appendChild(yb); }
     b.appendChild(yc);
+    var ydeep=el('button','tool','The channel in depth'); ydeep.addEventListener('click',function(){ memTab='studio'; renderMemTabs(); showMemTab('studio'); }); yc.appendChild(ydeep);
     // the website
     var sc=el('div','memcard mc-site'); sc.appendChild(el('div','mlabel','The website'));
     if(K.site && K.site.pages){
@@ -2671,6 +3013,15 @@
   try{ var av=localStorage.getItem(AUTO_KEY); if(av!==null) autoOn = av==='1'; }catch(e){}
   try{ var sv=parseInt(localStorage.getItem(SAVED_KEY)||'0',10); savedAt = isNaN(sv)?0:Math.min(sv, history.length); }catch(e){ savedAt=0; }
   loadRoomState(); renderState(); setInterval(function(){ renderState(); }, 60000);
+  // back from the Google sign-in for the channel in depth
+  (function(){
+    var m=/[?&]studio=(connected|failed)(?:&why=([^&]*))?/.exec(location.search || '');
+    if(!m) return;
+    try{ window.history.replaceState(null, '', location.pathname); }catch(e){}
+    var why=''; try{ why=decodeURIComponent((m[2] || '').replace(/\+/g, ' ')); }catch(e){ why=m[2] || ''; }
+    studioNotice = m[1]==='connected' ? 'Connected to YouTube Studio.' : 'That did not connect: '+(why || 'no reason given')+'.';
+    studioData=null; memTab='studio'; openMemory();
+  })();
   bootRealism();
   renderAmbientBtn(); renderAutoBtn(); renderPortraits(); renderWhisperBar(); renderCallNote(); render(); scheduleIdle(); scheduleAutoSave();
 })();
