@@ -2697,6 +2697,18 @@
       });
       tc.appendChild(tbl); b.appendChild(tc);
     }
+    // who earned the subscribers
+    if(S.subsBy && S.subsBy.length){
+      var ec2=el('div','memcard'); ec2.appendChild(el('div','mlabel','Who earned the subscribers'));
+      var gainers=S.subsBy.filter(function(v){ return v.gained>0; });
+      if(gainers.length) ec2.appendChild(sBars(gainers.map(function(v){
+        return { name: v.title || v.id, v: v.gained, label: '+'+fmtN(v.gained)+(v.views ? '  \u00b7  '+(Math.round(v.gained/v.views*1000)/10)+' per 100 views' : '')+(v.lost ? '  \u00b7  '+fmtN(v.lost)+' lost' : '') };
+      })));
+      if(S.subsElsewhere>0) ec2.appendChild(el('div','memsub','Not tied to any video (the channel page, search results and elsewhere): +'+fmtN(S.subsElsewhere)+(S.subsAll ? '' : ', roughly')+'.'));
+      var losers=S.subsBy.filter(function(v){ return !v.gained && v.lost; });
+      if(losers.length) ec2.appendChild(el('div','memsub','Lost without gaining any: '+losers.map(function(v){ return (v.title || v.id)+' ('+v.lost+')'; }).join(', ')+'.'));
+      b.appendChild(ec2);
+    }
     // where the views come from
     if(S.traffic && S.traffic.length){
       var fc=el('div','memcard'); fc.appendChild(el('div','mlabel','Where the views come from'));
@@ -2704,7 +2716,28 @@
       var rows=S.traffic.filter(function(t){ return t.views>0; }).slice(0, 7).map(function(t){ return { name: t.name, v: t.views, label: sPct(t.views, tv)+'%  \u00b7  '+fmtN(t.views) }; });
       var rest=0; S.traffic.slice(7).forEach(function(t){ rest+=t.views; });
       if(rest>0) rows.push({ name: 'Everything else', v: rest, label: sPct(rest, tv)+'%  \u00b7  '+fmtN(rest) });
-      fc.appendChild(sBars(rows)); b.appendChild(fc);
+      fc.appendChild(sBars(rows));
+      // video by video: which songs browse is pushing, which live on search, which get suggested
+      var BV=(S.byVideo||[]).filter(function(v){ return v.views>0; });
+      if(BV.length){
+        var share=function(v, key){ var n=0; v.sources.forEach(function(t){ if(t.key===key) n+=t.views; }); return n; };
+        [['SUBSCRIBER','What Browse is pushing'],['YT_SEARCH','What lives on search'],['RELATED_VIDEO','What gets suggested next to other videos']].forEach(function(K){
+          var list=BV.map(function(v){ return { v: v, n: share(v, K[0]) }; }).filter(function(x){ return x.n>0; }).sort(function(a2, b2){ return b2.n-a2.n; }).slice(0, 5);
+          if(!list.length) return;
+          fc.appendChild(el('div','stsec',K[1]));
+          fc.appendChild(sBars(list.map(function(x){ return { name: x.v.title || x.v.id, v: x.n, label: fmtN(x.n)+' views  \u00b7  '+sPct(x.n, x.v.views)+'% of its views' }; })));
+        });
+        var ev=el('details','sttable'); ev.appendChild(el('summary','','Every top video, every source'));
+        var evl=el('div','yttable');
+        BV.forEach(function(v){
+          var br=share(v,'SUBSCRIBER'), se=share(v,'YT_SEARCH'), su=share(v,'RELATED_VIDEO');
+          var r=el('div','ytrow'); r.appendChild(el('div','ytt',v.title || v.id));
+          r.appendChild(el('div','ytn',fmtN(v.views)+' views  \u00b7  browse '+sPct(br, v.views)+'%  \u00b7  search '+sPct(se, v.views)+'%  \u00b7  suggested '+sPct(su, v.views)+'%  \u00b7  other '+sPct(v.views-br-se-su, v.views)+'%'));
+          evl.appendChild(r);
+        });
+        ev.appendChild(evl); fc.appendChild(ev);
+      }
+      b.appendChild(fc);
     }
     // who watches
     var wc=el('div','memcard'); wc.appendChild(el('div','mlabel','Who watches'));
