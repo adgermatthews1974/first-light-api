@@ -658,6 +658,7 @@ export default async function handler(req, res) {
   var roomYT = require("../lib/room-youtube");
   var roomBooks = require("../lib/room-books");
   var roomInner = require("../lib/room-inner");
+  var roomStudio = require("../lib/room-studio");
   const origin = req.headers.origin || "";
   const allowOrigin = ALLOW_ANY ? "*" : (ALLOWED_ORIGINS.indexOf(origin) !== -1 ? origin : ALLOWED_ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Origin", allowOrigin);
@@ -665,6 +666,15 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-room-key");
   if (req.method === "OPTIONS") return res.status(204).end();
+  // the way back from the Google sign-in for the channel in depth. No passphrase can ride along
+  // on Google's redirect, so the one-time ticket the Room made for it guards this instead.
+  if (req.method === "GET" && req.query && req.query.state) {
+    let back = { ok: false, why: "something went wrong on the way back" };
+    try { back = await roomStudio.finish(req.query); } catch (e) {}
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Location", "/room.html?studio=" + (back.ok ? "connected" : "failed&why=" + encodeURIComponent(String(back.why || "").slice(0, 200))));
+    return res.status(302).end();
+  }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   // THE LOCK. Once ROOM_KEY is set in Vercel, only a page that knows the passphrase gets in.
   // Until it is set nothing changes, so this can go live before the passphrase exists.
@@ -935,6 +945,14 @@ export default async function handler(req, res) {
       }
       if (op === "siteRefresh") return res.status(200).json(await roomSite.refresh());
       if (op === "ytRefresh") return res.status(200).json(await roomYT.refresh());
+      // the channel in depth: YouTube Studio, through one Google sign-in kept on the server
+      if (op === "studioStatus") return res.status(200).json(await roomStudio.status());
+      if (op === "studioStart") return res.status(200).json(await roomStudio.start());
+      if (op === "studioPull") {
+        const pulled = await roomStudio.pull(true);
+        return res.status(200).json(Object.assign(await roomStudio.status(), { pull: pulled }));
+      }
+      if (op === "studioDisconnect") return res.status(200).json(await roomStudio.disconnect());
       if (op === "pushKey") return res.status(200).json({ ok: true, publicKey: (await roomPush.vapid()).publicKey });
       if (op === "pushSubscribe") {
         const rec = await roomPush.subscribe(body.subscription, body.label);
@@ -959,6 +977,7 @@ export default async function handler(req, res) {
         if (!force) {
           try { if (await roomSite.due()) await roomSite.refresh(); } catch (e) {}
           try { if (await roomYT.due()) await roomYT.refresh(); } catch (e) {}
+          try { if (await roomStudio.due()) await roomStudio.pull(false); } catch (e) {}
         }
         const say = function (why, sent) { return res.status(200).json({ ok: true, sent: !!sent, why: why }); };
         // a new week inside them, once, early on Monday; on a knock of its own so no tick runs long
@@ -994,7 +1013,9 @@ export default async function handler(req, res) {
         const emberLine2 = roomState.emberNote(currentState, relationTo, now);
         let ytNote = "";
         try { ytNote = await roomYT.channelNote(); } catch (e) {}
-        const msg = await writeText(currentState, settings, who, await weatherP, roomLife, roomWeather, roomState.localStamp, [cal, emberLine2, ytNote, roomInner.personNote(await getInner(), who, now, settings)].filter(Boolean).join("\n\n"));
+        let studioLine = "";
+        try { studioLine = await roomStudio.note("text"); } catch (e) {}
+        const msg = await writeText(currentState, settings, who, await weatherP, roomLife, roomWeather, roomState.localStamp, [cal, emberLine2, ytNote, studioLine, roomInner.personNote(await getInner(), who, now, settings)].filter(Boolean).join("\n\n"));
         const again = await roomState.loadState();
         again.lastPushAt = now.toISOString();
         again.pushDay = dayKey;
@@ -1088,6 +1109,16 @@ export default async function handler(req, res) {
     if (ytSnap && (ytTalk || (ytSnap.moments && ytSnap.moments.length))) {
       const ytLine = await roomYT.channelNote();
       if (ytLine) system += "\n\n=====================================================================\n\n" + ytLine;
+    }
+  } catch (e) {}
+  // the channel in depth: the whole Studio picture when the talk turns to the channel or its numbers,
+  // otherwise only a fresh moment worth mentioning
+  try {
+    const stSnap = await roomStudio.snapshot();
+    if (stSnap) {
+      const stTalk = /youtube|channel|video|views|subscri|watch ?(time|hours)|retention|analytic|revenue|monetiz|money|\bearn|cpm|traffic|audience|demograph|which countr|countries|partner program|\bypp\b|algorithm|\bshorts\b|numbers|stats/i.test(recentUser);
+      const stLine = stTalk ? roomStudio.studioNote(stSnap, "room") : ((stSnap.moments && stSnap.moments.length) ? roomStudio.studioNote(stSnap, "text") : "");
+      if (stLine) system += "\n\n=====================================================================\n\n" + stLine;
     }
   } catch (e) {}
   const calLine = roomLife.calendarNote(settings, new Date());
